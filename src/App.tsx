@@ -4,6 +4,9 @@ import { useState, useEffect } from "react";
 import Papa from "papaparse";
 import { SPORTS_DATA, SportType, League, SportData, Team } from "./types";
 
+const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQIyff_G1mCUQRIG_bIT44aQDN4IllZs7UR4V4btUBohm4h0mdxyfI7CWbxPSb12KwI4YrZh69hi3Wv/pub?gid=1488245481&single=true&output=csv";
+const PROXY_URL = "https://api.allorigins.win/raw?url=";
+
 // --- Sub-components ---
 
 const BackButton = ({ onClick }: { onClick: () => void }) => (
