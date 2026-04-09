@@ -2,7 +2,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { ChevronLeft, Trophy, Calendar, Users, ChevronRight, Loader2, Info } from "lucide-react";
 import { useState, useEffect } from "react";
 import Papa from "papaparse";
-import { SPORTS_DATA, SportType, League, SportData, Team } from "../types";
+import { SPORTS_DATA, SportType, League, SportData, Team } from "./types";
 
 // --- Sub-components ---
 
