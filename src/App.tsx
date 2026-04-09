@@ -145,8 +145,8 @@ export default function SportsApp() {
     setLastUpdated(null);
     try {
       // Use a public CORS proxy to avoid issues on static deployments like Netlify
-      const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
-      const response = await fetch(proxyUrl);
+      const PROXY_URL = "https://api.allorigins.win/raw?url=";
+      const response = await fetch(PROXY_URL + encodeURIComponent(SHEET_URL));
       
       if (!response.ok) {
         throw new Error(`Failed to fetch data (Status: ${response.status})`);
