@@ -52,10 +52,9 @@ const StandingsTab = ({ league, liveStandings, lastUpdated }: { league: League, 
           <tbody className="divide-y divide-slate-100">
             {sorted.map((team, i) => {
               const rank = i + 1;
-              // Line Logic: Top 4 Green, Bottom 2 Red
+              // Updated Logic: Only Top 2 get the green line
               let statusColor = "border-l-transparent";
-              if (rank <= 4) statusColor = "border-l-green-500";
-              else if (rank > sorted.length - 2) statusColor = "border-l-red-500";
+              if (rank <= 2) statusColor = "border-l-green-500";
 
               return (
                 <tr key={team.id} className={`border-l-4 ${statusColor} hover:bg-slate-50 transition-colors`}>
