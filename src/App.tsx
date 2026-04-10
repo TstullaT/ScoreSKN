@@ -4,9 +4,6 @@ import { useState, useEffect } from "react";
 import Papa from "papaparse";
 import { SPORTS_DATA, SportData, League, Team } from "./types";
 
-// --- Global Configuration ---
-const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQIyff_G1mCUQRIG_bIT44aQDN4IllZs7UR4V4btUBohm4h0mdxyfI7CWbxPSb12KwI4YrZh69hi3Wv/pub?gid=1488245481&single=true&output=csv";
-
 // --- Sub-components ---
 
 const BackButton = ({ onClick }: { onClick: () => void }) => (
@@ -20,13 +17,14 @@ const BackButton = ({ onClick }: { onClick: () => void }) => (
 );
 
 const StandingsTab = ({ league, liveStandings, lastUpdated }: { league: League, liveStandings: Team[] | null, lastUpdated: string | null }) => {
-  if (league.csvUrl && liveStandings && liveStandings.length === 0) {
+  // If no live data and no hardcoded data, show empty
+  if (!liveStandings && league.standings.length === 0) {
     return (
       <div className="bg-white p-12 rounded-xl border border-slate-200 text-center shadow-sm">
         <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
           <Info className="w-6 h-6 text-slate-300" />
         </div>
-        <p className="text-slate-500 font-medium">No live standings available.</p>
+        <p className="text-slate-500 font-medium">No standings available.</p>
       </div>
     );
   }
@@ -52,9 +50,14 @@ const StandingsTab = ({ league, liveStandings, lastUpdated }: { league: League, 
           <tbody className="divide-y divide-slate-100">
             {sorted.map((team, i) => {
               const rank = i + 1;
-              // Updated Logic: Only Top 2 get the green line
               let statusColor = "border-l-transparent";
-              if (rank <= 2) statusColor = "border-l-green-500";
+              
+              // Custom Logic based on League Name from types.ts
+              if (league.name.includes("Premier")) {
+                if (rank <= 4) statusColor = "border-l-green-500";
+              } else if (league.name.includes("Division 1")) {
+                if (rank <= 2) statusColor = "border-l-green-500";
+              }
 
               return (
                 <tr key={team.id} className={`border-l-4 ${statusColor} hover:bg-slate-50 transition-colors`}>
@@ -138,12 +141,12 @@ export default function SportsApp() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchLeagueData = async () => {
+  const fetchLeagueData = async (url: string) => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`${SHEET_URL}&cb=${Date.now()}`);
-      if (!response.ok) throw new Error("Connection failed");
+      const response = await fetch(`${url}&cb=${Date.now()}`);
+      if (!response.ok) throw new Error("Fetch failed");
       const csvData = await response.text();
 
       Papa.parse(csvData, {
@@ -174,14 +177,20 @@ export default function SportsApp() {
         }
       });
     } catch (err) {
-      setError("Failed to load scores.");
+      setError("Unable to sync live data.");
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (view === 'league-detail' && selectedLeague?.csvUrl) {
-      fetchLeagueData();
+    if (view === 'league-detail') {
+      if (selectedLeague?.csvUrl) {
+        fetchLeagueData(selectedLeague.csvUrl);
+      } else {
+        // Clear live standings if the league has no live URL (like Under 13)
+        setLiveStandings(null);
+        setLastUpdated(null);
+      }
     }
   }, [view, selectedLeague]);
 
@@ -204,7 +213,7 @@ export default function SportsApp() {
       <main className="max-w-md mx-auto px-6 mt-8">
         <AnimatePresence mode="wait">
           {view === 'home' && (
-            <motion.div key="home" className="grid grid-cols-2 gap-4">
+            <motion.div key="home" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="grid grid-cols-2 gap-4">
               {SPORTS_DATA.map((sport) => (
                 <button
                   key={sport.id}
@@ -221,7 +230,7 @@ export default function SportsApp() {
           )}
 
           {view === 'leagues' && (
-            <div className="space-y-3">
+            <motion.div key="leagues" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
               {selectedSport?.leagues.map((league) => (
                 <button
                   key={league.id}
@@ -232,11 +241,11 @@ export default function SportsApp() {
                   <ChevronRight className="w-5 h-5 text-slate-300" />
                 </button>
               ))}
-            </div>
+            </motion.div>
           )}
 
           {view === 'league-detail' && selectedLeague && (
-            <div className="space-y-6">
+            <motion.div key="detail" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
               <div className="flex bg-slate-200 p-1 rounded-xl">
                 {['standings', 'schedule', 'scorers'].map((tab) => (
                   <button
@@ -253,7 +262,13 @@ export default function SportsApp() {
                 <div className="flex justify-center py-12"><Loader2 className="animate-spin text-blue-600 w-8 h-8" /></div>
               ) : error ? (
                 <div className="text-center p-8 bg-white rounded-xl border border-red-50">
-                  <p className="text-slate-500 text-sm">{error}</p>
+                  <p className="text-slate-500 text-sm mb-4">{error}</p>
+                  <button 
+                    onClick={() => selectedLeague.csvUrl && fetchLeagueData(selectedLeague.csvUrl)}
+                    className="text-blue-600 text-xs font-bold underline"
+                  >
+                    Retry Connection
+                  </button>
                 </div>
               ) : (
                 <>
@@ -262,7 +277,7 @@ export default function SportsApp() {
                   {activeTab === 'scorers' && <ScorersTab league={selectedLeague} />}
                 </>
               )}
-            </div>
+            </motion.div>
           )}
         </AnimatePresence>
       </main>
