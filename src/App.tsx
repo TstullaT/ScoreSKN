@@ -5,7 +5,6 @@ import Papa from "papaparse";
 import { SPORTS_DATA, SportData, League, Team } from "./types";
 
 // --- Global Configuration ---
-// The URL stays the same, but we will handle the fetch differently
 const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQIyff_G1mCUQRIG_bIT44aQDN4IllZs7UR4V4btUBohm4h0mdxyfI7CWbxPSb12KwI4YrZh69hi3Wv/pub?gid=1488245481&single=true&output=csv";
 
 // --- Sub-components ---
@@ -51,17 +50,25 @@ const StandingsTab = ({ league, liveStandings, lastUpdated }: { league: League, 
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {sorted.map((team, i) => (
-              <tr key={team.id} className="border-l-4 border-l-transparent hover:bg-slate-50 transition-colors">
-                <td className="px-3 py-3 text-xs font-medium text-slate-500">{i + 1}</td>
-                <td className="px-3 py-3 text-sm font-bold text-slate-800 truncate max-w-[120px]">{team.name}</td>
-                <td className="px-2 py-3 text-center text-xs font-medium text-slate-600">{team.played ?? '-'}</td>
-                <td className="px-2 py-3 text-center text-xs font-medium text-slate-600">{team.wins ?? '-'}</td>
-                <td className="px-2 py-3 text-center text-xs font-medium text-slate-600">{team.draws ?? '-'}</td>
-                <td className="px-2 py-3 text-center text-xs font-medium text-slate-600">{team.losses ?? '-'}</td>
-                <td className="px-3 py-3 text-right text-sm font-mono font-bold text-blue-600">{team.points}</td>
-              </tr>
-            ))}
+            {sorted.map((team, i) => {
+              const rank = i + 1;
+              // Line Logic: Top 4 Green, Bottom 2 Red
+              let statusColor = "border-l-transparent";
+              if (rank <= 4) statusColor = "border-l-green-500";
+              else if (rank > sorted.length - 2) statusColor = "border-l-red-500";
+
+              return (
+                <tr key={team.id} className={`border-l-4 ${statusColor} hover:bg-slate-50 transition-colors`}>
+                  <td className="px-3 py-3 text-xs font-medium text-slate-500">{rank}</td>
+                  <td className="px-3 py-3 text-sm font-bold text-slate-800 truncate max-w-[120px]">{team.name}</td>
+                  <td className="px-2 py-3 text-center text-xs font-medium text-slate-600">{team.played ?? '-'}</td>
+                  <td className="px-2 py-3 text-center text-xs font-medium text-slate-600">{team.wins ?? '-'}</td>
+                  <td className="px-2 py-3 text-center text-xs font-medium text-slate-600">{team.draws ?? '-'}</td>
+                  <td className="px-2 py-3 text-center text-xs font-medium text-slate-600">{team.losses ?? '-'}</td>
+                  <td className="px-3 py-3 text-right text-sm font-mono font-bold text-blue-600">{team.points}</td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -74,7 +81,6 @@ const StandingsTab = ({ league, liveStandings, lastUpdated }: { league: League, 
   );
 };
 
-// ... (ScheduleTab and ScorersTab remain the same) ...
 const ScheduleTab = ({ league }: { league: League }) => (
   <div className="space-y-3">
     {league.schedule.length > 0 ? league.schedule.map((match) => (
@@ -137,11 +143,8 @@ export default function SportsApp() {
     setLoading(true);
     setError(null);
     try {
-      // Adding a cache buster and fetching directly from Google
       const response = await fetch(`${SHEET_URL}&cb=${Date.now()}`);
-      
-      if (!response.ok) throw new Error("Could not connect to Google Sheets.");
-      
+      if (!response.ok) throw new Error("Connection failed");
       const csvData = await response.text();
 
       Papa.parse(csvData, {
@@ -172,7 +175,7 @@ export default function SportsApp() {
         }
       });
     } catch (err) {
-      setError("Failed to load scores. Please refresh.");
+      setError("Failed to load scores.");
       setLoading(false);
     }
   };
