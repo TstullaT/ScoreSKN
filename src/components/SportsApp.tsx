@@ -11,8 +11,8 @@ const BackButton = ({ onClick, theme }: { onClick: () => void, theme: 'light' | 
     onClick={onClick}
     className={`flex items-center gap-1 transition-colors mb-4 group px-3 py-1 rounded-full border ${
       theme === 'dark' 
-        ? 'text-blue-100 border-white/10 bg-white/5 hover:bg-white/10' 
-        : 'text-green-600 border-slate-200 bg-white hover:bg-slate-50 shadow-sm'
+        ? 'text-slate-100 border-white/10 bg-white/5 hover:bg-white/10' 
+        : 'text-green-700 border-slate-200 bg-white hover:bg-slate-50 shadow-sm'
     }`}
   >
     <ChevronLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
@@ -129,7 +129,7 @@ const ScorersTab = ({ league, theme }: { league: League, theme: 'light' | 'dark'
           <tr key={scorer.id}>
             <td className="px-4 py-3">
               <div className={`text-sm font-black italic uppercase ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{scorer.name}</div>
-              <div className="text-[10px] text-blue-500 font-bold">{scorer.team}</div>
+              <div className={`text-[10px] font-bold ${theme === 'dark' ? 'text-yellow-500/80' : 'text-red-600'}`}>{scorer.team}</div>
             </td>
             <td className={`px-4 py-3 text-right text-sm font-mono font-black ${theme === 'dark' ? 'text-yellow-500' : 'text-green-600'}`}>{scorer.goals}</td>
           </tr>
@@ -152,7 +152,7 @@ export default function SportsApp() {
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [theme, setTheme] = useState<'light' | 'dark'>('dark');
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
 
   const fetchLeagueData = async (url: string) => {
     setLoading(true);
@@ -214,11 +214,21 @@ export default function SportsApp() {
       
       {/* Visual Background Elements */}
       <div className="fixed inset-0 pointer-events-none">
-        <div className={`absolute top-0 right-0 w-64 h-64 blur-[120px] rounded-full opacity-20 ${theme === 'dark' ? 'bg-blue-600' : 'bg-green-400'}`}></div>
-        <div className={`absolute bottom-0 left-0 w-64 h-64 blur-[120px] rounded-full opacity-10 ${theme === 'dark' ? 'bg-yellow-500' : 'bg-blue-400'}`}></div>
+        <div className={`absolute top-0 right-0 w-64 h-64 blur-[120px] rounded-full opacity-20 ${theme === 'dark' ? 'bg-green-600' : 'bg-green-500'}`}></div>
+        <div className={`absolute bottom-0 left-0 w-64 h-64 blur-[120px] rounded-full opacity-10 ${theme === 'dark' ? 'bg-red-600' : 'bg-red-500'}`}></div>
+        <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 blur-[150px] rounded-full opacity-5 ${theme === 'dark' ? 'bg-yellow-500' : 'bg-yellow-400'}`}></div>
       </div>
 
-      <header className={`pt-16 pb-8 px-6 sticky top-0 z-20 backdrop-blur-md border-b transition-all ${theme === 'dark' ? 'bg-slate-950/80 border-white/5 shadow-2xl shadow-black' : 'bg-white/80 border-slate-200 shadow-sm'}`}>
+      <header className={`relative pt-16 pb-8 px-6 sticky top-0 z-20 backdrop-blur-md border-b transition-all overflow-hidden ${theme === 'dark' ? 'bg-slate-950/90 border-white/5 shadow-2xl shadow-black' : 'bg-white/90 border-slate-200 shadow-sm'}`}>
+        {/* Flag-themed Banner Accent */}
+        <div className="absolute top-0 left-0 w-full h-1 flex">
+          <div className="flex-1 bg-green-600" />
+          <div className="w-4 bg-yellow-400" />
+          <div className="w-12 bg-black" />
+          <div className="w-4 bg-yellow-400" />
+          <div className="flex-1 bg-red-600" />
+        </div>
+
         <div className="max-w-md mx-auto relative">
           <button 
             onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')} 
@@ -235,12 +245,14 @@ export default function SportsApp() {
             )}
           </AnimatePresence>
           
-          <h1 className="text-5xl font-black italic tracking-tighter uppercase leading-none">
-            <span className={theme === 'dark' ? 'text-white' : 'text-slate-900'}>SPORTS</span>
-            <span className={theme === 'dark' ? 'text-yellow-400' : 'text-green-600'}>KN</span>
+          <h1 className="text-5xl font-black italic tracking-tighter uppercase leading-none flex items-center">
+            <span className={`bg-clip-text text-transparent bg-gradient-to-r from-green-600 ${theme === 'dark' ? 'to-white' : 'to-green-400'}`}>Sport</span>
+            <span className="relative">
+              <span className={`bg-clip-text text-transparent bg-gradient-to-r from-yellow-400 ${theme === 'dark' ? 'via-white' : 'via-black'} to-red-600 pr-6`}>Skn</span>
+            </span>
           </h1>
           {view === 'league-detail' && (
-            <p className="text-[10px] font-black uppercase tracking-[0.3em] mt-2 opacity-50">{selectedLeague?.name}</p>
+            <p className={`text-[10px] font-black uppercase tracking-[0.3em] mt-2 ${theme === 'dark' ? 'text-green-500' : 'text-red-600'}`}>{selectedLeague?.name}</p>
           )}
         </div>
       </header>

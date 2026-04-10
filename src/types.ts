@@ -1,4 +1,4 @@
-import { LucideIcon, Trophy, CircleDot, Timer } from "lucide-react";
+import { LucideIcon, Trophy, CircleDot, Timer, Dribbble } from "lucide-react";
 
 export interface Team {
   id: string;
@@ -64,6 +64,26 @@ export const SPORTS_DATA: SportData[] = [
           { id: "t1", name: "Mantab FC", played: 10, wins: 8, draws: 1, losses: 1, points: 25 },
           { id: "t2", name: "Security Forces", played: 10, wins: 7, draws: 2, losses: 1, points: 23 }
         ],
+        schedule: [],
+        topScorers: []
+      },
+      {
+        id: "u13",
+        name: "SKNFA Under 13",
+        standings: [],
+        schedule: [],
+        topScorers: []
+      }
+    ]
+  },
+  {
+    id: "BASKETBALL",
+    icon: Dribbble,
+    leagues: [
+      {
+        id: "sknaba-premier",
+        name: "SKNABA Premier League",
+        standings: [],
         schedule: [],
         topScorers: []
       }
