@@ -60,10 +60,8 @@ export const SPORTS_DATA: SportData[] = [
       {
         id: "division-1",
         name: "SKNFA Division 1",
-        standings: [
-          { id: "t1", name: "Mantab FC", played: 10, wins: 8, draws: 1, losses: 1, points: 25 },
-          { id: "t2", name: "Security Forces", played: 10, wins: 7, draws: 2, losses: 1, points: 23 }
-        ],
+        csvUrl: "https://docs.google.com/spreadsheets/d/e/2PACX-1vQIyff_G1mCUQRIG_bIT44aQDN4IllZs7UR4V4btUBohm4h0mdxyfI7CWbxPSb12KwI4YrZh69hi3Wv/pub?gid=1809975653&single=true&output=csv",
+        standings: [],
         schedule: [],
         topScorers: []
       },
