@@ -9,7 +9,7 @@ import { SPORTS_DATA, SportData, League, Team } from "../types";
 const BackButton = ({ onClick, theme }: { onClick: () => void, theme: 'light' | 'dark' }) => (
   <button 
     onClick={onClick}
-    className={`flex items-center gap-1 transition-colors mb-4 group px-3 py-1 rounded-full border ${
+    className={`flex items-center gap-1 transition-colors group px-3 py-1 rounded-full border ${
       theme === 'dark' 
         ? 'text-slate-100 border-white/10 bg-white/5 hover:bg-white/10' 
         : 'text-green-700 border-slate-200 bg-white hover:bg-slate-50 shadow-sm'
@@ -69,24 +69,15 @@ const StandingsTab = ({ league, liveStandings, lastUpdated, isLoading, theme }: 
               else if (league.name.includes("Division 1") && rank <= 2) statusColor = "border-l-green-500";
 
               return (
-                <React.Fragment key={team.id}>
-                  {league.name.includes("Premier") && rank === 9 && (
-                    <tr className="border-none">
-                      <td colSpan={7} className="p-0">
-                        <div className="h-0.5 bg-red-600/30 w-full" />
-                      </td>
-                    </tr>
-                  )}
-                  <motion.tr variants={itemVariants} className={`transition-colors border-l-4 ${statusColor} ${theme === 'dark' ? 'hover:bg-white/5' : 'hover:bg-slate-50'}`}>
-                    <td className="px-3 py-4 text-xs font-black text-slate-400">{rank}</td>
-                    <td className={`px-3 py-4 text-sm font-black italic truncate max-w-[120px] uppercase tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{team.name}</td>
-                    <td className={`px-2 py-4 text-center text-xs font-bold ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>{team.played ?? '-'}</td>
-                    <td className={`px-2 py-4 text-center text-xs font-bold ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>{team.wins ?? '-'}</td>
-                    <td className={`px-2 py-4 text-center text-xs font-bold ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>{team.draws ?? '-'}</td>
-                    <td className={`px-2 py-4 text-center text-xs font-bold ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>{team.losses ?? '-'}</td>
-                    <td className={`px-3 py-4 text-right text-sm font-mono font-black ${theme === 'dark' ? 'text-yellow-500' : 'text-green-600'}`}>{team.points}</td>
-                  </motion.tr>
-                </React.Fragment>
+                <motion.tr key={team.id} variants={itemVariants} className={`transition-colors border-l-4 ${statusColor} ${theme === 'dark' ? 'hover:bg-white/5' : 'hover:bg-slate-50'}`}>
+                  <td className="px-3 py-4 text-xs font-black text-slate-400">{rank}</td>
+                  <td className={`px-3 py-4 text-sm font-black italic truncate max-w-[120px] uppercase tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{team.name}</td>
+                  <td className={`px-2 py-4 text-center text-xs font-bold ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>{team.played ?? '-'}</td>
+                  <td className={`px-2 py-4 text-center text-xs font-bold ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>{team.wins ?? '-'}</td>
+                  <td className={`px-2 py-4 text-center text-xs font-bold ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>{team.draws ?? '-'}</td>
+                  <td className={`px-2 py-4 text-center text-xs font-bold ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>{team.losses ?? '-'}</td>
+                  <td className={`px-3 py-4 text-right text-sm font-mono font-black ${theme === 'dark' ? 'text-yellow-500' : 'text-green-600'}`}>{team.points}</td>
+                </motion.tr>
               );
             })}
           </motion.tbody>
@@ -240,20 +231,24 @@ export default function SportsApp() {
         </div>
 
         <div className="max-w-md mx-auto relative">
-          <button 
-            onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')} 
-            className={`absolute -top-10 right-0 p-2 rounded-full border transition-all ${theme === 'dark' ? 'bg-white/5 border-white/10 text-yellow-400' : 'bg-white border-slate-200 text-slate-600 shadow-sm'}`}
-          >
-            {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
-          </button>
-          
-          <AnimatePresence>
-            {view !== 'home' && (
-              <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }}>
-                <BackButton onClick={goBack} theme={theme} />
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <div className="flex justify-between items-center mb-6 min-h-[32px]">
+            <div className="flex-1">
+              <AnimatePresence>
+                {view !== 'home' && (
+                  <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }}>
+                    <BackButton onClick={goBack} theme={theme} />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+            
+            <button 
+              onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')} 
+              className={`p-2 rounded-full border transition-all ${theme === 'dark' ? 'bg-white/5 border-white/10 text-yellow-400' : 'bg-white border-slate-200 text-slate-600 shadow-sm'}`}
+            >
+              {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+            </button>
+          </div>
           
           <h1 className="text-5xl font-black italic tracking-tighter uppercase leading-none flex items-center">
             <span className={`bg-clip-text text-transparent bg-gradient-to-r from-green-600 ${theme === 'dark' ? 'to-white' : 'to-green-400'}`}>Sport</span>
