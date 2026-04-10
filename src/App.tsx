@@ -5,9 +5,8 @@ import Papa from "papaparse";
 import { SPORTS_DATA, SportData, League, Team } from "./types";
 
 // --- Global Configuration ---
+// The URL stays the same, but we will handle the fetch differently
 const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQIyff_G1mCUQRIG_bIT44aQDN4IllZs7UR4V4btUBohm4h0mdxyfI7CWbxPSb12KwI4YrZh69hi3Wv/pub?gid=1488245481&single=true&output=csv";
-// Swapped to a more stable proxy service
-const PROXY_URL = "https://corsproxy.io/?url=";
 
 // --- Sub-components ---
 
@@ -28,7 +27,7 @@ const StandingsTab = ({ league, liveStandings, lastUpdated }: { league: League, 
         <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
           <Info className="w-6 h-6 text-slate-300" />
         </div>
-        <p className="text-slate-500 font-medium">No live standings data available.</p>
+        <p className="text-slate-500 font-medium">No live standings available.</p>
       </div>
     );
   }
@@ -75,6 +74,7 @@ const StandingsTab = ({ league, liveStandings, lastUpdated }: { league: League, 
   );
 };
 
+// ... (ScheduleTab and ScorersTab remain the same) ...
 const ScheduleTab = ({ league }: { league: League }) => (
   <div className="space-y-3">
     {league.schedule.length > 0 ? league.schedule.map((match) => (
@@ -123,8 +123,6 @@ const ScorersTab = ({ league }: { league: League }) => (
   </div>
 );
 
-// --- Main App ---
-
 export default function SportsApp() {
   const [view, setView] = useState<'home' | 'leagues' | 'league-detail'>('home');
   const [selectedSport, setSelectedSport] = useState<SportData | null>(null);
@@ -139,15 +137,10 @@ export default function SportsApp() {
     setLoading(true);
     setError(null);
     try {
-      // Use encodeURIComponent to safely wrap the URL for the proxy
-      // Added a cache-buster (&cb=) to ensure fresh data every time
-      const finalUrl = PROXY_URL + encodeURIComponent(SHEET_URL + "&cb=" + Date.now());
+      // Adding a cache buster and fetching directly from Google
+      const response = await fetch(`${SHEET_URL}&cb=${Date.now()}`);
       
-      const response = await fetch(finalUrl);
-      
-      if (!response.ok) {
-        throw new Error(`Proxy error (Status: ${response.status})`);
-      }
+      if (!response.ok) throw new Error("Could not connect to Google Sheets.");
       
       const csvData = await response.text();
 
@@ -157,24 +150,18 @@ export default function SportsApp() {
         complete: (results) => {
           if (results.data && results.data.length > 0) {
             const keys = Object.keys(results.data[0] as any);
-            
-            // Flexible matching for column names (Team, P, W, D, L, PTS)
-            const teamKey = keys.find(k => k.toLowerCase().includes('team') || k.toLowerCase().includes('club')) || 'Team';
+            const teamKey = keys.find(k => k.toLowerCase().includes('team')) || 'Team';
             const ptsKey = keys.find(k => k.toLowerCase() === 'pts' || k.toLowerCase().includes('points')) || 'PTS';
-            const pKey = keys.find(k => k.toLowerCase() === 'p' || k.toLowerCase() === 'played') || 'P';
-            const wKey = keys.find(k => k.toLowerCase() === 'w' || k.toLowerCase() === 'wins') || 'W';
-            const dKey = keys.find(k => k.toLowerCase() === 'd' || k.toLowerCase() === 'draws') || 'D';
-            const lKey = keys.find(k => k.toLowerCase() === 'l' || k.toLowerCase() === 'losses') || 'L';
 
             const mappedData: Team[] = results.data
               .filter((row: any) => row[teamKey])
               .map((row: any, index: number) => ({
                 id: `live-${index}`,
                 name: String(row[teamKey]),
-                played: parseInt(row[pKey] || 0),
-                wins: parseInt(row[wKey] || 0),
-                draws: parseInt(row[dKey] || 0),
-                losses: parseInt(row[lKey] || 0),
+                played: parseInt(row['P'] || row['Played'] || 0),
+                wins: parseInt(row['W'] || row['Wins'] || 0),
+                draws: parseInt(row['D'] || row['Draws'] || 0),
+                losses: parseInt(row['L'] || row['Losses'] || 0),
                 points: parseInt(row[ptsKey] || 0)
               }));
             
@@ -182,14 +169,10 @@ export default function SportsApp() {
             setLastUpdated(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
           }
           setLoading(false);
-        },
-        error: () => {
-          setError("Failed to parse sheet data.");
-          setLoading(false);
         }
       });
     } catch (err) {
-      setError("Data source unreachable. Try again in a moment.");
+      setError("Failed to load scores. Please refresh.");
       setLoading(false);
     }
   };
@@ -213,27 +196,18 @@ export default function SportsApp() {
           <h1 className="text-3xl font-black italic uppercase tracking-tighter">
             {view === 'home' ? 'SPORTSKN' : selectedSport?.id}
           </h1>
-          <p className="text-blue-200 text-[10px] font-bold uppercase tracking-widest mt-1">
-            {view === 'home' ? 'Local Sports Hub' : selectedLeague?.name}
-          </p>
         </div>
       </header>
 
       <main className="max-w-md mx-auto px-6 mt-8">
         <AnimatePresence mode="wait">
           {view === 'home' && (
-            <motion.div 
-              key="home" 
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="grid grid-cols-2 gap-4"
-            >
+            <motion.div key="home" className="grid grid-cols-2 gap-4">
               {SPORTS_DATA.map((sport) => (
                 <button
                   key={sport.id}
                   onClick={() => { setSelectedSport(sport); setView('leagues'); }}
-                  className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col items-center gap-4 hover:border-blue-500 transition-all active:scale-95"
+                  className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col items-center gap-4 active:scale-95 transition-all"
                 >
                   <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600">
                     <sport.icon className="w-6 h-6" />
@@ -245,40 +219,28 @@ export default function SportsApp() {
           )}
 
           {view === 'leagues' && (
-            <motion.div 
-              key="leagues"
-              initial={{ opacity: 0, x: 10 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -10 }}
-              className="space-y-3"
-            >
+            <div className="space-y-3">
               {selectedSport?.leagues.map((league) => (
                 <button
                   key={league.id}
                   onClick={() => { setSelectedLeague(league); setView('league-detail'); }}
-                  className="w-full bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between hover:border-blue-500 transition-all"
+                  className="w-full bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between"
                 >
                   <span className="font-bold text-slate-700">{league.name}</span>
                   <ChevronRight className="w-5 h-5 text-slate-300" />
                 </button>
               ))}
-            </motion.div>
+            </div>
           )}
 
           {view === 'league-detail' && selectedLeague && (
-            <motion.div 
-              key="detail"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="space-y-6"
-            >
+            <div className="space-y-6">
               <div className="flex bg-slate-200 p-1 rounded-xl">
                 {['standings', 'schedule', 'scorers'].map((tab) => (
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab as any)}
-                    className={`flex-1 py-2.5 rounded-lg text-xs font-bold capitalize transition-all ${activeTab === tab ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500'}`}
+                    className={`flex-1 py-2.5 rounded-lg text-xs font-bold capitalize ${activeTab === tab ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500'}`}
                   >
                     {tab}
                   </button>
@@ -286,22 +248,10 @@ export default function SportsApp() {
               </div>
 
               {loading ? (
-                <div className="flex flex-col items-center justify-center py-12 gap-3">
-                  <Loader2 className="animate-spin text-blue-600 w-8 h-8" />
-                  <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Refreshing Data...</span>
-                </div>
+                <div className="flex justify-center py-12"><Loader2 className="animate-spin text-blue-600 w-8 h-8" /></div>
               ) : error ? (
-                <div className="text-center p-12 bg-white rounded-xl border border-red-50 shadow-sm">
-                  <div className="w-12 h-12 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Info className="w-6 h-6 text-red-400" />
-                  </div>
-                  <p className="text-slate-500 text-sm mb-6">{error}</p>
-                  <button 
-                    onClick={fetchLeagueData}
-                    className="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold text-sm shadow-md active:scale-95"
-                  >
-                    Try Again
-                  </button>
+                <div className="text-center p-8 bg-white rounded-xl border border-red-50">
+                  <p className="text-slate-500 text-sm">{error}</p>
                 </div>
               ) : (
                 <>
@@ -310,7 +260,7 @@ export default function SportsApp() {
                   {activeTab === 'scorers' && <ScorersTab league={selectedLeague} />}
                 </>
               )}
-            </motion.div>
+            </div>
           )}
         </AnimatePresence>
       </main>
