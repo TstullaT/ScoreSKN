@@ -1,96 +1,134 @@
 import { motion, AnimatePresence } from "motion/react";
-import { ChevronLeft, Trophy, Calendar, Users, ChevronRight, Loader2, Info } from "lucide-react";
+import { ChevronLeft, Trophy, Calendar, Users, ChevronRight, Loader2, Info, Sun, Moon } from "lucide-react";
 import { useState, useEffect } from "react";
 import Papa from "papaparse";
-import { SPORTS_DATA, SportType, League, SportData, Team } from "../types";
+import { SPORTS_DATA, SportData, League, Team } from "../types";
 
 // --- Sub-components ---
 
-const BackButton = ({ onClick }: { onClick: () => void }) => (
+const BackButton = ({ onClick, theme }: { onClick: () => void, theme: 'light' | 'dark' }) => (
   <button 
     onClick={onClick}
-    className="flex items-center gap-1 text-blue-100 hover:text-white transition-colors mb-4 group"
+    className={`flex items-center gap-1 transition-colors mb-4 group ${theme === 'dark' ? 'text-blue-100 hover:text-white' : 'text-green-600 hover:text-green-800'}`}
   >
     <ChevronLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
     <span className="text-sm font-medium">Back</span>
   </button>
 );
 
-const StandingsTab = ({ league, liveStandings, lastUpdated }: { league: League, liveStandings: Team[] | null, lastUpdated: string | null }) => {
-  // If this is a live league (has csvUrl) and we have an empty array (meaning fetch finished but no data)
-  // we show a message instead of falling back to static data.
-  if (league.csvUrl && liveStandings && liveStandings.length === 0) {
+const StandingsTab = ({ league, liveStandings, lastUpdated, isLoading, theme }: { league: League, liveStandings: Team[] | null, lastUpdated: string | null, isLoading: boolean, theme: 'light' | 'dark' }) => {
+  // If no live data and no hardcoded data, show empty
+  if (!liveStandings && league.standings.length === 0) {
     return (
-      <div className="bg-white p-12 rounded-xl border border-slate-200 text-center shadow-sm">
-        <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
-          <Info className="w-6 h-6 text-slate-300" />
+      <div className={`${theme === 'dark' ? 'bg-slate-900/40 backdrop-blur-xl border-white/10' : 'bg-white border-slate-200'} p-12 rounded-2xl border text-center shadow-2xl`}>
+        <div className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4 border ${theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-slate-50 border-slate-100'}`}>
+          <Info className={`w-6 h-6 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-300'}`} />
         </div>
-        <p className="text-slate-500 font-medium">No live standings data available at the moment.</p>
-        <p className="text-slate-400 text-xs mt-1">Please check back later or contact the administrator.</p>
+        <p className={`${theme === 'dark' ? 'text-white' : 'text-slate-800'} font-bold uppercase tracking-tight`}>No standings available.</p>
       </div>
     );
   }
 
   const dataToUse = (liveStandings && liveStandings.length > 0) ? liveStandings : league.standings;
   const sorted = [...dataToUse].sort((a, b) => b.points - a.points);
+
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.05
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, x: -20 },
+    show: { opacity: 1, x: 0 }
+  };
+
   return (
-    <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
+    <div className={`${theme === 'dark' ? 'bg-slate-900/40 backdrop-blur-xl border-white/20' : 'bg-white border-slate-200'} rounded-2xl shadow-2xl overflow-hidden border relative group`}>
+      {/* Glowing border effect */}
+      <div className={`absolute inset-0 border rounded-2xl pointer-events-none transition-colors duration-500 ${theme === 'dark' ? 'border-blue-500/20 group-hover:border-blue-500/40' : 'border-transparent group-hover:border-blue-500/10'}`} />
+      
       <div className="overflow-x-auto">
         <table className="w-full border-collapse min-w-[400px]">
           <thead>
-            <tr className="bg-slate-50 border-b border-slate-200">
-              <th className="px-3 py-3 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider w-10">#</th>
-              <th className="px-3 py-3 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider">Team</th>
-              <th className="px-2 py-3 text-center text-[10px] font-bold text-slate-400 uppercase tracking-wider w-10">P</th>
-              <th className="px-2 py-3 text-center text-[10px] font-bold text-slate-400 uppercase tracking-wider w-10">W</th>
-              <th className="px-2 py-3 text-center text-[10px] font-bold text-slate-400 uppercase tracking-wider w-10">D</th>
-              <th className="px-2 py-3 text-center text-[10px] font-bold text-slate-400 uppercase tracking-wider w-10">L</th>
-              <th className="px-3 py-3 text-right text-[10px] font-bold text-slate-400 uppercase tracking-wider w-14">PTS</th>
+            <tr className={`${theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-slate-50 border-slate-200'} border-b`}>
+              <th className="px-3 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] w-10">#</th>
+              <th className="px-3 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Team</th>
+              <th className="px-2 py-4 text-center text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] w-10">P</th>
+              <th className="px-2 py-4 text-center text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] w-10">W</th>
+              <th className="px-2 py-4 text-center text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] w-10">D</th>
+              <th className="px-2 py-4 text-center text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] w-10">L</th>
+              <th className={`px-3 py-4 text-right text-[10px] font-black uppercase tracking-[0.2em] w-14 ${theme === 'dark' ? 'text-yellow-500' : 'text-green-600'}`}>PTS</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
-            {sorted.map((team, i) => (
-              <tr 
-                key={team.id} 
-                className={`
-                  ${(league.id === 'd1' ? i < 2 : i < 4) ? "border-l-4 border-l-green-500" : 
-                    (league.id === 'pl' && (i === 8 || i === 9)) ? "border-l-4 border-l-red-500" : 
-                    "border-l-4 border-l-transparent"}
-                `}
-              >
-                <td className="px-3 py-3 text-xs font-medium text-slate-500">{i + 1}</td>
-                <td className="px-3 py-3 text-sm font-bold text-slate-800 truncate max-w-[120px]">{team.name}</td>
-                <td className="px-2 py-3 text-center text-xs font-medium text-slate-600">{team.played ?? '-'}</td>
-                <td className="px-2 py-3 text-center text-xs font-medium text-slate-600">{team.wins ?? '-'}</td>
-                <td className="px-2 py-3 text-center text-xs font-medium text-slate-600">{team.draws ?? '-'}</td>
-                <td className="px-2 py-3 text-center text-xs font-medium text-slate-600">{team.losses ?? '-'}</td>
-                <td className="px-3 py-3 text-right text-sm font-mono font-bold text-blue-600">{team.points}</td>
-              </tr>
-            ))}
-          </tbody>
+          <motion.tbody 
+            className={`divide-y ${theme === 'dark' ? 'divide-white/5' : 'divide-slate-100'}`}
+            variants={containerVariants}
+            initial="hidden"
+            animate="show"
+          >
+            {sorted.map((team, i) => {
+              const rank = i + 1;
+              let statusColor = "border-l-transparent";
+              
+              // Custom Logic based on League Name from types.ts
+              if (league.name.includes("Premier")) {
+                if (rank <= 4) statusColor = "border-l-green-500";
+              } else if (league.name.includes("Division 1")) {
+                if (rank <= 2) statusColor = "border-l-green-500";
+              }
+
+              return (
+                <motion.tr 
+                  key={team.id} 
+                  variants={itemVariants}
+                  className={`
+                    transition-colors border-l-4 ${statusColor}
+                    ${theme === 'dark' ? 'hover:bg-white/5' : 'hover:bg-slate-50'}
+                  `}
+                >
+                  <td className="px-3 py-4 text-xs font-black text-slate-500">{rank}</td>
+                  <td className={`px-3 py-4 text-sm font-black italic truncate max-w-[120px] uppercase tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{team.name}</td>
+                  <td className={`px-2 py-4 text-center text-xs font-bold ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>{team.played ?? '-'}</td>
+                  <td className={`px-2 py-4 text-center text-xs font-bold ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>{team.wins ?? '-'}</td>
+                  <td className={`px-2 py-4 text-center text-xs font-bold ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>{team.draws ?? '-'}</td>
+                  <td className={`px-2 py-4 text-center text-xs font-bold ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>{team.losses ?? '-'}</td>
+                  <td className={`px-3 py-4 text-right text-sm font-mono font-black ${theme === 'dark' ? 'text-yellow-500' : 'text-green-600'}`}>{team.points}</td>
+                </motion.tr>
+              );
+            })}
+          </motion.tbody>
         </table>
       </div>
       {lastUpdated && (
-        <div className="px-4 py-2 bg-slate-50 border-t border-slate-100 text-[10px] text-slate-400 font-medium italic text-right">
-          Last updated: {lastUpdated}
+        <div className={`px-4 py-3 border-t text-[9px] font-black uppercase tracking-widest italic text-right flex justify-between items-center ${theme === 'dark' ? 'bg-black/20 border-white/5 text-slate-500' : 'bg-slate-50 border-slate-100 text-slate-400'}`}>
+          <div className="flex items-center gap-2">
+            <div className={`w-1.5 h-1.5 rounded-full ${isLoading ? 'bg-yellow-500 animate-pulse' : 'bg-green-500'}`} />
+            <span>{isLoading ? 'Syncing...' : 'Data Stable'}</span>
+          </div>
+          <span>Updated: {lastUpdated}</span>
         </div>
       )}
     </div>
   );
 };
 
-const ScheduleTab = ({ league }: { league: League }) => (
+const ScheduleTab = ({ league, theme }: { league: League, theme: 'light' | 'dark' }) => (
   <div className="space-y-3">
     {league.schedule.length > 0 ? league.schedule.map((match) => (
-      <div key={match.id} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+      <div key={match.id} className={`p-4 rounded-xl border shadow-sm ${theme === 'dark' ? 'bg-slate-900/40 border-white/10' : 'bg-white border-slate-200'}`}>
         <div className="flex justify-between items-center mb-2">
           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{match.date}</span>
-          <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">{match.time}</span>
+          <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${theme === 'dark' ? 'text-green-400 bg-green-900/30' : 'text-green-600 bg-green-50'}`}>{match.time}</span>
         </div>
         <div className="flex items-center justify-between gap-4">
-          <div className="flex-1 text-right font-bold text-slate-800">{match.home}</div>
+          <div className={`flex-1 text-right font-bold ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{match.home}</div>
           <div className="text-slate-300 font-black italic">VS</div>
-          <div className="flex-1 text-left font-bold text-slate-800">{match.away}</div>
+          <div className={`flex-1 text-left font-bold ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{match.away}</div>
         </div>
       </div>
     )) : (
@@ -99,23 +137,23 @@ const ScheduleTab = ({ league }: { league: League }) => (
   </div>
 );
 
-const ScorersTab = ({ league }: { league: League }) => (
-  <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
+const ScorersTab = ({ league, theme }: { league: League, theme: 'light' | 'dark' }) => (
+  <div className={`rounded-xl shadow-sm overflow-hidden border ${theme === 'dark' ? 'bg-slate-900/40 border-white/10' : 'bg-white border-slate-200'}`}>
     <table className="w-full border-collapse">
       <thead>
-        <tr className="bg-slate-50 border-b border-slate-200">
+        <tr className={`border-b ${theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-slate-50 border-slate-200'}`}>
           <th className="px-4 py-3 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider">Player</th>
           <th className="px-4 py-3 text-right text-[10px] font-bold text-slate-400 uppercase tracking-wider w-16">Goals</th>
         </tr>
       </thead>
-      <tbody className="divide-y divide-slate-100">
+      <tbody className={`divide-y ${theme === 'dark' ? 'divide-white/5' : 'divide-slate-100'}`}>
         {league.topScorers.length > 0 ? league.topScorers.map((scorer) => (
           <tr key={scorer.id}>
             <td className="px-4 py-3">
-              <div className="text-sm font-bold text-slate-800">{scorer.name}</div>
+              <div className={`text-sm font-bold ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{scorer.name}</div>
               <div className="text-[10px] text-slate-400 font-medium">{scorer.team}</div>
             </td>
-            <td className="px-4 py-3 text-right text-sm font-mono font-bold text-blue-600">{scorer.goals}</td>
+            <td className={`px-4 py-3 text-right text-sm font-mono font-bold ${theme === 'dark' ? 'text-yellow-500' : 'text-green-600'}`}>{scorer.goals}</td>
           </tr>
         )) : (
           <tr>
@@ -138,144 +176,61 @@ export default function SportsApp() {
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
 
   const fetchLeagueData = async (url: string) => {
     setLoading(true);
     setError(null);
-    setLastUpdated(null);
     try {
-      // Use the server-side proxy to avoid CORS issues
-      const proxyUrl = `/api/proxy-csv?url=${encodeURIComponent(url)}`;
+      // Use a public CORS proxy to avoid issues on static deployments like Netlify
+      const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}&cb=${Date.now()}`;
       const response = await fetch(proxyUrl);
       
-      if (!response.ok) {
-        throw new Error(`Failed to fetch data (Status: ${response.status})`);
-      }
-      
+      if (!response.ok) throw new Error("Fetch failed");
       const csvData = await response.text();
-      console.log("Raw CSV Data (first 200 chars):", csvData.substring(0, 200));
-      
-      if (!csvData || csvData.trim().length === 0) {
-        throw new Error("The data source returned no content.");
-      }
 
       Papa.parse(csvData, {
         header: true,
         skipEmptyLines: true,
         complete: (results) => {
-          console.log("PapaParse Results:", results);
           if (results.data && results.data.length > 0) {
-            // Find the actual keys in the CSV to handle different naming/casing
-            const firstRow = results.data[0] as any;
-            const keys = Object.keys(firstRow);
-            
-            // Log keys for debugging
-            console.log("Detected CSV Keys:", keys);
-
-            // Try to find "Last Updated" date in headers or rows
-            let foundDate: string | null = null;
-            
-            // Check if any header contains the date info
-            const dateHeader = keys.find(k => k.toLowerCase().includes('updated') || k.toLowerCase().includes('date'));
-            if (dateHeader && (dateHeader.toLowerCase().includes('last') || dateHeader.includes(':'))) {
-              const parts = dateHeader.split(':');
-              foundDate = parts.length > 1 ? parts[1].trim() : dateHeader.replace(/last updated/i, '').trim();
-            }
-
-            // If not in headers, check the first few rows for a standalone date cell
-            if (!foundDate) {
-              for (const row of results.data.slice(0, 5) as any[]) {
-                for (const val of Object.values(row)) {
-                  const s = String(val);
-                  if (s.toLowerCase().includes('updated')) {
-                    const parts = s.split(':');
-                    foundDate = parts.length > 1 ? parts[1].trim() : s.replace(/last updated/i, '').trim();
-                    break;
-                  }
-                }
-                if (foundDate) break;
-              }
-            }
-            
-            if (foundDate) setLastUpdated(foundDate);
-
-            const teamKey = keys.find(k => {
-              const clean = k.toLowerCase().trim();
-              return clean.includes('team') || clean.includes('club') || clean === 't' || clean.includes('name');
-            });
-            
-            const ptsKey = keys.find(k => {
-              const clean = k.toLowerCase().trim();
-              return clean === 'pts' || clean === 'points' || (clean.includes('pts') && !clean.includes('pts/')) || clean.includes('points');
-            });
-            
-            const playedKey = keys.find(k => {
-              const clean = k.toLowerCase().trim();
-              return clean === 'p' || clean === 'played' || clean === 'gp' || clean === 'mp' || clean === 'm';
-            });
-            
-            const winsKey = keys.find(k => {
-              const clean = k.toLowerCase().trim();
-              return clean === 'w' || clean === 'wins' || clean === 'won';
-            });
-            
-            const drawsKey = keys.find(k => {
-              const clean = k.toLowerCase().trim();
-              return clean === 'd' || clean === 'draws' || clean === 'drawn';
-            });
-            
-            const lossesKey = keys.find(k => {
-              const clean = k.toLowerCase().trim();
-              return clean === 'l' || clean === 'losses' || clean === 'lost';
-            });
+            const keys = Object.keys(results.data[0] as any);
+            const teamKey = keys.find(k => k.toLowerCase().includes('team')) || 'Team';
+            const ptsKey = keys.find(k => k.toLowerCase() === 'pts' || k.toLowerCase().includes('points')) || 'PTS';
 
             const mappedData: Team[] = results.data
-              .filter((row: any) => teamKey && row[teamKey] && String(row[teamKey]).trim().length > 0)
-              .map((row: any, index: number) => {
-                const parseVal = (key?: string) => {
-                  if (!key) return undefined;
-                  const val = String(row[key]).trim();
-                  const num = parseInt(val.replace(/[^0-9-]/g, ''));
-                  return isNaN(num) ? 0 : num;
-                };
-
-                return {
-                  id: `live-${index}`,
-                  name: String(row[teamKey!]).trim(),
-                  played: parseVal(playedKey),
-                  wins: parseVal(winsKey),
-                  draws: parseVal(drawsKey),
-                  losses: parseVal(lossesKey),
-                  points: parseVal(ptsKey) || 0
-                };
-              });
+              .filter((row: any) => row[teamKey])
+              .map((row: any, index: number) => ({
+                id: `live-${index}`,
+                name: String(row[teamKey]),
+                played: parseInt(row['P'] || row['Played'] || 0),
+                wins: parseInt(row['W'] || row['Wins'] || 0),
+                draws: parseInt(row['D'] || row['Draws'] || 0),
+                losses: parseInt(row['L'] || row['Losses'] || 0),
+                points: parseInt(row[ptsKey] || 0)
+              }));
             
-            console.log("Mapped Data:", mappedData);
             setLiveStandings(mappedData);
-          } else {
-            console.warn("No data rows found in CSV");
-            setLiveStandings([]);
+            setLastUpdated(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
           }
-          setLoading(false);
-        },
-        error: (err: any) => {
-          console.error("CSV Parsing Error:", err);
-          setError("Failed to process the data format.");
           setLoading(false);
         }
       });
     } catch (err) {
-      console.error("Fetch Error:", err);
-      setError(err instanceof Error ? err.message : "Failed to fetch live data.");
+      setError("Unable to sync live data.");
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (view === 'league-detail' && selectedLeague?.csvUrl) {
-      fetchLeagueData(selectedLeague.csvUrl);
-    } else {
-      setLiveStandings(null);
+    if (view === 'league-detail') {
+      if (selectedLeague?.csvUrl) {
+        fetchLeagueData(selectedLeague.csvUrl);
+      } else {
+        // Clear live standings if the league has no live URL (like Under 13)
+        setLiveStandings(null);
+        setLastUpdated(null);
+      }
     }
   }, [view, selectedLeague]);
 
@@ -295,11 +250,28 @@ export default function SportsApp() {
     else if (view === 'leagues') setView('home');
   };
 
+  const toggleTheme = () => setTheme(prev => prev === 'light' ? 'dark' : 'light');
+
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans pb-12">
+    <div className={`min-h-screen font-sans pb-12 overflow-x-hidden transition-colors duration-300 ${theme === 'dark' ? 'bg-black text-white' : 'bg-slate-50 text-slate-900'}`}>
+      {/* Ambient Glow */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className={`absolute -top-[10%] -left-[10%] w-[50%] h-[50%] blur-[120px] rounded-full transition-colors duration-500 ${theme === 'dark' ? 'bg-green-600/10' : 'bg-green-500/10'}`} />
+        <div className={`absolute -top-[5%] -right-[5%] w-[40%] h-[40%] blur-[100px] rounded-full transition-colors duration-500 ${theme === 'dark' ? 'bg-red-600/10' : 'bg-red-500/10'}`} />
+        <div className={`absolute bottom-0 left-1/2 -translate-x-1/2 w-[60%] h-[20%] blur-[80px] transition-colors duration-500 ${theme === 'dark' ? 'bg-yellow-500/5' : 'bg-yellow-500/5'}`} />
+      </div>
+
       {/* Header */}
-      <header className="bg-blue-900 text-white pt-12 pb-6 px-6 sticky top-0 z-10 shadow-lg">
-        <div className="max-w-md mx-auto">
+      <header className={`relative pt-16 pb-8 px-6 sticky top-0 z-20 backdrop-blur-md border-b transition-colors duration-300 ${theme === 'dark' ? 'bg-gradient-to-b from-black to-slate-900/40 border-white/5' : 'bg-white/80 border-slate-200'}`}>
+        <div className="max-w-md mx-auto relative">
+          {/* Theme Toggle */}
+          <button 
+            onClick={toggleTheme}
+            className={`absolute -top-8 right-0 p-2 rounded-full border transition-all ${theme === 'dark' ? 'bg-white/5 border-white/10 text-yellow-400 hover:bg-white/10' : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200'}`}
+          >
+            {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+          </button>
+
           <AnimatePresence mode="wait">
             {view !== 'home' && (
               <motion.div
@@ -307,21 +279,18 @@ export default function SportsApp() {
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -10 }}
               >
-                <BackButton onClick={goBack} />
+                <BackButton onClick={goBack} theme={theme} />
               </motion.div>
             )}
           </AnimatePresence>
           
-          <h1 className="text-3xl font-black tracking-tighter italic uppercase">
+          <h1 className={`text-5xl font-black tracking-tighter italic uppercase text-transparent bg-clip-text bg-gradient-to-r transition-all duration-500 ${theme === 'dark' ? 'from-white via-yellow-400 to-white drop-shadow-[0_0_15px_rgba(252,209,22,0.3)]' : 'from-slate-900 via-green-600 to-slate-900 drop-shadow-sm'}`}>
             {view === 'home' ? 'SPORTSKN' : selectedSport?.id}
           </h1>
-          <p className="text-blue-200 text-xs font-bold uppercase tracking-widest mt-1">
-            {view === 'home' ? 'Select your sport' : view === 'leagues' ? 'Choose a league' : selectedLeague?.name}
-          </p>
         </div>
       </header>
 
-      <main className="max-w-md mx-auto px-6 mt-8">
+      <main className="max-w-md mx-auto px-6 mt-10 relative z-10">
         <AnimatePresence mode="wait">
           {view === 'home' && (
             <motion.div 
@@ -335,12 +304,13 @@ export default function SportsApp() {
                 <button
                   key={sport.id}
                   onClick={() => handleSportClick(sport)}
-                  className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col items-center justify-center gap-4 group hover:border-blue-500 hover:shadow-md transition-all active:scale-95"
+                  className={`p-8 rounded-3xl shadow-2xl border flex flex-col items-center justify-center gap-4 group transition-all active:scale-95 relative overflow-hidden ${theme === 'dark' ? 'bg-white/5 border-white/10 hover:border-green-500/50 hover:bg-white/10' : 'bg-white border-slate-200 hover:border-green-500/50 hover:shadow-xl'}`}
                 >
-                  <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                    <sport.icon className="w-6 h-6" />
+                  <div className={`absolute inset-0 bg-gradient-to-br transition-opacity opacity-0 group-hover:opacity-100 ${theme === 'dark' ? 'from-green-500/5 to-transparent' : 'from-green-500/5 to-transparent'}`} />
+                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-300 shadow-inner border ${theme === 'dark' ? 'bg-white/5 border-white/5 text-yellow-500 group-hover:bg-green-600 group-hover:text-white' : 'bg-slate-50 border-slate-100 text-green-600 group-hover:bg-green-600 group-hover:text-white'}`}>
+                    <sport.icon className="w-7 h-7" />
                   </div>
-                  <span className="font-bold text-slate-700 group-hover:text-blue-600 transition-colors">{sport.id}</span>
+                  <span className={`font-black italic uppercase tracking-wider transition-colors ${theme === 'dark' ? 'text-slate-300 group-hover:text-white' : 'text-slate-700 group-hover:text-green-600'}`}>{sport.id}</span>
                 </button>
               ))}
             </motion.div>
@@ -354,21 +324,14 @@ export default function SportsApp() {
               exit={{ opacity: 0, x: -20 }}
               className="space-y-3"
             >
-              {selectedSport?.orgName && (
-                <div className="flex bg-slate-200 p-1 rounded-xl mb-4">
-                  <button className="flex-1 py-2.5 bg-white text-blue-600 rounded-lg font-bold text-[10px] shadow-sm uppercase tracking-widest">
-                    {selectedSport.orgName}
-                  </button>
-                </div>
-              )}
               {selectedSport?.leagues.map((league) => (
                 <button
                   key={league.id}
                   onClick={() => handleLeagueClick(league)}
-                  className="w-full bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between group hover:border-blue-500 transition-all active:scale-[0.98]"
+                  className={`w-full p-6 rounded-2xl shadow-xl border flex items-center justify-between group transition-all active:scale-[0.98] ${theme === 'dark' ? 'bg-white/5 backdrop-blur-xl border-white/10 hover:border-yellow-500/50 hover:bg-white/10' : 'bg-white border-slate-200 hover:border-green-500/50 hover:shadow-lg'}`}
                 >
-                  <span className="font-bold text-slate-700 group-hover:text-blue-600 transition-colors">{league.name}</span>
-                  <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-blue-500 group-hover:translate-x-1 transition-all" />
+                  <span className={`font-black italic uppercase tracking-widest transition-colors ${theme === 'dark' ? 'text-slate-300 group-hover:text-white' : 'text-slate-700 group-hover:text-green-600'}`}>{league.name}</span>
+                  <ChevronRight className={`w-5 h-5 transition-all ${theme === 'dark' ? 'text-slate-600 group-hover:text-yellow-500 group-hover:translate-x-1' : 'text-slate-300 group-hover:text-green-500 group-hover:translate-x-1'}`} />
                 </button>
               ))}
             </motion.div>
@@ -382,67 +345,50 @@ export default function SportsApp() {
               exit={{ opacity: 0, y: -20 }}
             >
               {/* Tabs */}
-              <div className="flex bg-slate-200 p-1 rounded-xl mb-6">
-                <button 
-                  onClick={() => setActiveTab('standings')}
-                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'standings' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500'}`}
-                >
-                  <Trophy className="w-3.5 h-3.5" />
-                  Standings
-                </button>
-                <button 
-                  onClick={() => setActiveTab('schedule')}
-                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'schedule' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500'}`}
-                >
-                  <Calendar className="w-3.5 h-3.5" />
-                  Schedule
-                </button>
-                <button 
-                  onClick={() => setActiveTab('scorers')}
-                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'scorers' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500'}`}
-                >
-                  <Users className="w-3.5 h-3.5" />
-                  Scorers
-                </button>
+              <div className={`flex p-1 rounded-2xl mb-8 border ${theme === 'dark' ? 'bg-white/5 backdrop-blur-md border-white/10' : 'bg-slate-200 border-slate-300'}`}>
+                {['standings', 'schedule', 'scorers'].map((tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab as any)}
+                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === tab ? (theme === 'dark' ? 'bg-green-600 text-white shadow-lg italic' : 'bg-green-600 text-white shadow-sm italic') : 'text-slate-500 hover:text-slate-300'}`}
+                  >
+                    {tab === 'standings' && <Trophy className="w-3.5 h-3.5" />}
+                    {tab === 'schedule' && <Calendar className="w-3.5 h-3.5" />}
+                    {tab === 'scorers' && <Users className="w-3.5 h-3.5" />}
+                    {tab}
+                  </button>
+                ))}
               </div>
 
-              {/* Tab Content */}
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={activeTab}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  {loading ? (
-                    <div className="flex flex-col items-center justify-center py-12 text-blue-600 gap-3">
-                      <Loader2 className="w-8 h-8 animate-spin" />
-                      <span className="font-bold text-sm uppercase tracking-widest">Loading Live Data...</span>
-                    </div>
-                  ) : error ? (
-                    <div className="bg-white p-12 rounded-xl border border-red-100 text-center shadow-sm">
-                      <div className="w-12 h-12 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <Info className="w-6 h-6 text-red-400" />
-                      </div>
-                      <p className="text-red-600 font-bold uppercase tracking-tight">Connection Error</p>
-                      <p className="text-slate-500 text-sm mt-1 mb-6">We couldn't reach the live data source. This might be due to a network issue or an invalid URL.</p>
-                      <button 
-                        onClick={() => selectedLeague?.csvUrl && fetchLeagueData(selectedLeague.csvUrl)}
-                        className="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold text-sm hover:bg-blue-700 transition-colors shadow-md active:scale-95"
-                      >
-                        Try Again
-                      </button>
-                    </div>
-                  ) : (
-                    <>
-                      {activeTab === 'standings' && <StandingsTab league={selectedLeague} liveStandings={liveStandings} lastUpdated={lastUpdated} />}
-                      {activeTab === 'schedule' && <ScheduleTab league={selectedLeague} />}
-                      {activeTab === 'scorers' && <ScorersTab league={selectedLeague} />}
-                    </>
-                  )}
-                </motion.div>
-              </AnimatePresence>
+              {loading ? (
+                <div className={`flex flex-col items-center justify-center py-20 gap-4 ${theme === 'dark' ? 'text-yellow-500' : 'text-green-600'}`}>
+                  <div className="relative">
+                    <Loader2 className="w-10 h-10 animate-spin" />
+                    <div className={`absolute inset-0 blur-lg animate-pulse ${theme === 'dark' ? 'bg-yellow-500/20' : 'bg-green-500/20'}`} />
+                  </div>
+                  <span className="font-black text-[10px] uppercase tracking-[0.4em] italic">Fetching Data...</span>
+                </div>
+              ) : error ? (
+                <div className={`p-12 rounded-3xl border text-center shadow-2xl ${theme === 'dark' ? 'bg-white/5 backdrop-blur-xl border-red-500/20' : 'bg-white border-red-100'}`}>
+                  <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6 border ${theme === 'dark' ? 'bg-red-500/10 border-red-500/20' : 'bg-red-50'}`}>
+                    <Info className="w-8 h-8 text-red-500" />
+                  </div>
+                  <p className={`font-black uppercase tracking-widest italic text-lg ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>Connection Error</p>
+                  <p className="text-slate-400 text-sm mt-2 mb-8 max-w-[240px] mx-auto">{error}</p>
+                  <button 
+                    onClick={() => selectedLeague?.csvUrl && fetchLeagueData(selectedLeague.csvUrl)}
+                    className={`px-10 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-lg active:scale-95 italic ${theme === 'dark' ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-green-600 text-white hover:bg-green-700'}`}
+                  >
+                    Retry
+                  </button>
+                </div>
+              ) : (
+                <>
+                  {activeTab === 'standings' && <StandingsTab league={selectedLeague} liveStandings={liveStandings} lastUpdated={lastUpdated} isLoading={loading} theme={theme} />}
+                  {activeTab === 'schedule' && <ScheduleTab league={selectedLeague} theme={theme} />}
+                  {activeTab === 'scorers' && <ScorersTab league={selectedLeague} theme={theme} />}
+                </>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
