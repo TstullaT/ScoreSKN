@@ -11,9 +11,15 @@ export default defineConfig(({mode}) => {
       react(), 
       tailwindcss(),
       legacy({
-        targets: ['defaults', 'not IE 11', 'ios >= 12', 'android >= 6'],
+        targets: ['> 0.5%', 'last 2 versions', 'Firefox ESR', 'not dead', 'IE 11', 'ios_saf >= 10', 'android >= 4.4'],
+        additionalLegacyPolyfills: ['regenerator-runtime/runtime']
       })
     ],
+    build: {
+      target: 'es5',
+      minify: 'terser',
+      cssTarget: 'chrome61',
+    },
     define: {
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
     },

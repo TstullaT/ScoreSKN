@@ -30,11 +30,21 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="SCORESKN" />
     <link rel="apple-touch-icon" href="/icon.png" />
+    <script>
+      if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
+        location.replace('https:' + window.location.href.substring(window.location.protocol.length));
+      }
+    </script>
   </head>
   <body>
     <div id="root">
-      <div style="display: flex; justify-content: center; align-items: center; height: 100vh; font-family: sans-serif; color: #666;">
-        Loading SCORESKN...
+      <div style="display: flex; justify-content: center; align-items: center; height: 100vh; font-family: sans-serif; color: #666; text-align: center; padding: 20px;">
+        <div>
+          <p>Loading SCORESKN...</p>
+          <noscript>
+            <p style="color: #ef4444; margin-top: 10px;">JavaScript is required to view this site.</p>
+          </noscript>
+        </div>
       </div>
     </div>
     <script type="module" src="/src/main.tsx"></script>
