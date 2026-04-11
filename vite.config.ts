@@ -14,10 +14,6 @@ export default defineConfig(({mode}) => {
         targets: ['defaults', 'not IE 11', 'ios >= 12', 'android >= 6'],
       })
     ],
-    build: {
-      target: 'es2015',
-      cssTarget: 'chrome61',
-    },
     define: {
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
     },
