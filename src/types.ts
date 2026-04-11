@@ -16,6 +16,8 @@ export interface Match {
   away: string;
   date: string;
   time: string;
+  homeScore?: number;
+  awayScore?: number;
 }
 
 export interface Scorer {
@@ -32,6 +34,7 @@ export interface League {
   schedule: Match[];
   topScorers: Scorer[];
   csvUrl?: string;
+  scheduleCsvUrl?: string;
 }
 
 export interface SportData {
@@ -49,13 +52,10 @@ export const SPORTS_DATA: SportData[] = [
         id: "premier-league",
         name: "SKNFA Premier League",
         csvUrl: "https://docs.google.com/spreadsheets/d/e/2PACX-1vQIyff_G1mCUQRIG_bIT44aQDN4IllZs7UR4V4btUBohm4h0mdxyfI7CWbxPSb12KwI4YrZh69hi3Wv/pub?gid=1488245481&single=true&output=csv",
+        scheduleCsvUrl: "https://docs.google.com/spreadsheets/d/e/2PACX-1vQIyff_G1mCUQRIG_bIT44aQDN4IllZs7UR4V4btUBohm4h0mdxyfI7CWbxPSb12KwI4YrZh69hi3Wv/pub?gid=1215230199&single=true&output=csv",
         standings: [],
-        schedule: [
-          { id: "m1", home: "Rams Village Superstars", away: "St. Paul's United", date: "Sat, June 15", time: "7:00 PM" }
-        ],
-        topScorers: [
-          { id: "s1", name: "Keithroy Freeman", team: "St. Paul's United", goals: 12 }
-        ]
+        schedule: [],
+        topScorers: []
       },
       {
         id: "division-1",
@@ -68,6 +68,7 @@ export const SPORTS_DATA: SportData[] = [
       {
         id: "u13",
         name: "SKNFA Under 13",
+        csvUrl: "https://docs.google.com/spreadsheets/d/e/2PACX-1vQIyff_G1mCUQRIG_bIT44aQDN4IllZs7UR4V4btUBohm4h0mdxyfI7CWbxPSb12KwI4YrZh69hi3Wv/pub?gid=1495966735&single=true&output=csv",
         standings: [],
         schedule: [],
         topScorers: []

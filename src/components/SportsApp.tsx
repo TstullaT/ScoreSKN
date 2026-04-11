@@ -2,7 +2,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, Trophy, Calendar, Users, ChevronRight, Loader2, Info, Sun, Moon } from "lucide-react";
 import React, { useState, useEffect } from "react";
 import Papa from "papaparse";
-import { SPORTS_DATA, SportData, League, Team } from "../types";
+import { SPORTS_DATA, SportData, League, Team, Match } from "../types";
 
 // --- Sub-components ---
 
@@ -96,53 +96,190 @@ const StandingsTab = ({ league, liveStandings, lastUpdated, isLoading, theme }: 
   );
 };
 
-const ScheduleTab = ({ league, theme }: { league: League, theme: 'light' | 'dark' }) => (
-  <div className="space-y-3">
-    {league.schedule.length > 0 ? league.schedule.map((match) => (
-      <div key={match.id} className={`p-4 rounded-xl border shadow-sm ${theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-white border-slate-200'}`}>
-        <div className="flex justify-between items-center mb-2">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{match.date}</span>
-          <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${theme === 'dark' ? 'text-green-400 bg-green-900/30' : 'text-green-600 bg-green-50'}`}>{match.time}</span>
-        </div>
-        <div className="flex items-center justify-between gap-4">
-          <div className={`flex-1 text-right font-black italic text-sm ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{match.home}</div>
-          <div className="text-slate-400 text-[10px] font-black italic">VS</div>
-          <div className={`flex-1 text-left font-black italic text-sm ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{match.away}</div>
-        </div>
-      </div>
-    )) : (
-      <div className="text-center py-12 text-slate-400 italic font-medium">No matches on the horizon.</div>
-    )}
-  </div>
-);
+const ScheduleTab = ({ league, liveSchedule, theme }: { league: League, liveSchedule: Match[] | null, theme: 'light' | 'dark' }) => {
+  const [showFullSchedule, setShowFullSchedule] = useState(false);
+  const scheduleToUse = (liveSchedule && liveSchedule.length > 0) ? liveSchedule : league.schedule;
+  
+  // Robust Date filtering logic
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
 
-const ScorersTab = ({ league, theme }: { league: League, theme: 'light' | 'dark' }) => (
-  <div className={`rounded-xl shadow-sm overflow-hidden border ${theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-white border-slate-200'}`}>
-    <table className="w-full border-collapse">
-      <thead>
-        <tr className={`border-b ${theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-slate-50 border-slate-200'}`}>
-          <th className="px-4 py-3 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider">Player</th>
-          <th className="px-4 py-3 text-right text-[10px] font-bold text-slate-400 uppercase tracking-wider w-16">Goals</th>
-        </tr>
-      </thead>
-      <tbody className={`divide-y ${theme === 'dark' ? 'divide-white/5' : 'divide-slate-100'}`}>
-        {league.topScorers.length > 0 ? league.topScorers.map((scorer) => (
-          <tr key={scorer.id}>
-            <td className="px-4 py-3">
-              <div className={`text-sm font-black italic uppercase ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{scorer.name}</div>
-              <div className={`text-[10px] font-bold ${theme === 'dark' ? 'text-yellow-500/80' : 'text-red-600'}`}>{scorer.team}</div>
-            </td>
-            <td className={`px-4 py-3 text-right text-sm font-mono font-black ${theme === 'dark' ? 'text-yellow-500' : 'text-green-600'}`}>{scorer.goals}</td>
+  const parseMatchDate = (dateStr: string) => {
+    if (!dateStr) return null;
+    
+    // Try standard parsing first
+    let d = new Date(dateStr);
+    
+    // If invalid, try common SKN formats like DD/MM/YYYY or DD/MM
+    if (isNaN(d.getTime())) {
+      const parts = dateStr.split(/[\/\-\.]/);
+      if (parts.length >= 2) {
+        const day = parseInt(parts[0]);
+        const month = parseInt(parts[1]) - 1; // 0-indexed
+        const year = parts.length === 3 ? parseInt(parts[2]) : today.getFullYear();
+        
+        // Handle 2-digit years
+        const fullYear = year < 100 ? 2000 + year : year;
+        
+        d = new Date(fullYear, month, day);
+      }
+    }
+
+    if (isNaN(d.getTime())) return null;
+    d.setHours(0, 0, 0, 0);
+    return d;
+  };
+
+  // Find the next available match date (today or in the future)
+  const uniqueDates = Array.from(new Set(scheduleToUse.map(m => m.date)))
+    .map(dStr => ({ str: dStr, date: parseMatchDate(dStr) }))
+    .filter(d => d.date !== null)
+    .sort((a, b) => a.date!.getTime() - b.date!.getTime());
+
+  // 1. Try to find today or future
+  let nextMatchDateObj = uniqueDates.find(d => d.date! >= today);
+  
+  // 2. If no future matches, fallback to the MOST RECENT past date (last in sorted list)
+  if (!nextMatchDateObj && uniqueDates.length > 0) {
+    nextMatchDateObj = uniqueDates[uniqueDates.length - 1];
+  }
+
+  const nextMatchDateStr = nextMatchDateObj?.str;
+  
+  const getOrdinal = (d: number) => {
+    if (d > 3 && d < 21) return 'th';
+    switch (d % 10) {
+      case 1:  return "st";
+      case 2:  return "nd";
+      case 3:  return "rd";
+      default: return "th";
+    }
+  };
+
+  const formatFriendlyDate = (date: Date | null) => {
+    if (!date) return "";
+    const month = date.toLocaleString('default', { month: 'long' });
+    const day = date.getDate();
+    return `${month} ${day}${getOrdinal(day)}`;
+  };
+
+  const filteredSchedule = showFullSchedule 
+    ? scheduleToUse 
+    : scheduleToUse.filter(m => m.date === nextMatchDateStr);
+
+  const hasMore = scheduleToUse.length > filteredSchedule.length;
+
+  return (
+    <div className="space-y-3">
+      {!showFullSchedule && nextMatchDateObj && (
+        <div className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest mb-4 text-center ${theme === 'dark' ? 'bg-green-500/10 text-green-400' : 'bg-green-50 text-green-600'}`}>
+          Showing matches for: {formatFriendlyDate(nextMatchDateObj.date)}
+        </div>
+      )}
+
+      {filteredSchedule.length > 0 ? filteredSchedule.map((match) => {
+        const hasScores = match.homeScore !== undefined && match.awayScore !== undefined;
+        const homeWinner = hasScores && match.homeScore! > match.awayScore!;
+        const awayWinner = hasScores && match.awayScore! > match.homeScore!;
+        
+        return (
+          <div key={match.id} className={`p-4 rounded-xl border shadow-sm ${theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-white border-slate-200'}`}>
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{match.date}</span>
+              {!hasScores && (
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${theme === 'dark' ? 'text-green-400 bg-green-900/30' : 'text-green-600 bg-green-50'}`}>{match.time}</span>
+              )}
+              {hasScores && (
+                <span className={`text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-tighter ${theme === 'dark' ? 'text-yellow-500 bg-yellow-500/10' : 'text-red-600 bg-red-50'}`}>Final Score</span>
+              )}
+            </div>
+            <div className="flex items-center justify-between gap-4">
+              <div className={`flex-1 text-right font-black italic text-sm transition-colors ${
+                homeWinner 
+                  ? (theme === 'dark' ? 'text-green-400' : 'text-green-600') 
+                  : (theme === 'dark' ? 'text-white' : 'text-slate-800')
+              }`}>
+                {match.home}
+              </div>
+              
+              <div className="flex items-center gap-2">
+                {hasScores ? (
+                  <div className={`flex items-center gap-3 px-3 py-1 rounded-lg font-mono font-black text-lg ${theme === 'dark' ? 'bg-white/5 text-white' : 'bg-slate-100 text-slate-900'}`}>
+                    <span className={homeWinner ? (theme === 'dark' ? 'text-green-400' : 'text-green-600') : ''}>{match.homeScore}</span>
+                    <span className="text-slate-400 text-xs">-</span>
+                    <span className={awayWinner ? (theme === 'dark' ? 'text-green-400' : 'text-green-600') : ''}>{match.awayScore}</span>
+                  </div>
+                ) : (
+                  <div className="text-slate-400 text-[10px] font-black italic">VS</div>
+                )}
+              </div>
+
+              <div className={`flex-1 text-left font-black italic text-sm transition-colors ${
+                awayWinner 
+                  ? (theme === 'dark' ? 'text-green-400' : 'text-green-600') 
+                  : (theme === 'dark' ? 'text-white' : 'text-slate-800')
+              }`}>
+                {match.away}
+              </div>
+            </div>
+          </div>
+        );
+      }) : (
+        <div className="text-center py-12 text-slate-400 italic font-medium">No matches on the horizon.</div>
+      )}
+
+      {hasMore && (
+        <button 
+          onClick={() => setShowFullSchedule(true)}
+          className={`w-full py-4 mt-4 rounded-xl border-2 border-dashed font-black uppercase tracking-[0.2em] text-[10px] transition-all hover:scale-[1.02] active:scale-95 ${
+            theme === 'dark' 
+              ? 'border-white/10 text-slate-400 hover:border-green-500/50 hover:text-green-400' 
+              : 'border-slate-200 text-slate-500 hover:border-green-500/50 hover:text-green-600'
+          }`}
+        >
+          View Full Schedule
+        </button>
+      )}
+    </div>
+  );
+};
+
+const ScorersTab = ({ league, theme }: { league: League, theme: 'light' | 'dark' }) => {
+  if (league.topScorers.length === 0) {
+    return (
+      <div className={`${theme === 'dark' ? 'bg-slate-900/40 backdrop-blur-xl border-white/10' : 'bg-white border-slate-200'} p-12 rounded-2xl border text-center shadow-2xl`}>
+        <div className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4 border ${theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-slate-50 border-slate-100'}`}>
+          <Info className={`w-6 h-6 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-300'}`} />
+        </div>
+        <p className={`${theme === 'dark' ? 'text-white' : 'text-slate-800'} font-bold uppercase tracking-tight`}>No scorers data available yet.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`rounded-xl shadow-sm overflow-hidden border ${theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-white border-slate-200'}`}>
+      <table className="w-full border-collapse">
+        <thead>
+          <tr className={`border-b ${theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-slate-50 border-slate-200'}`}>
+            <th className="px-4 py-3 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider">Player</th>
+            <th className="px-4 py-3 text-right text-[10px] font-bold text-slate-400 uppercase tracking-wider w-16">Goals</th>
           </tr>
-        )) : (
-          <tr>
-            <td colSpan={2} className="text-center py-12 text-slate-400 italic">No scorers data yet.</td>
-          </tr>
-        )}
-      </tbody>
-    </table>
-  </div>
-);
+        </thead>
+        <tbody className={`divide-y ${theme === 'dark' ? 'divide-white/5' : 'divide-slate-100'}`}>
+          {league.topScorers.map((scorer) => (
+            <tr key={scorer.id}>
+              <td className="px-4 py-3">
+                <div className={`text-sm font-black italic uppercase ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{scorer.name}</div>
+                <div className={`text-[10px] font-bold ${theme === 'dark' ? 'text-yellow-500/80' : 'text-red-600'}`}>{scorer.team}</div>
+              </td>
+              <td className={`px-4 py-3 text-right text-sm font-mono font-black ${theme === 'dark' ? 'text-yellow-500' : 'text-green-600'}`}>{scorer.goals}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};
 
 export default function SportsApp() {
   const [view, setView] = useState<'home' | 'leagues' | 'league-detail'>('home');
@@ -150,6 +287,7 @@ export default function SportsApp() {
   const [selectedLeague, setSelectedLeague] = useState<League | null>(null);
   const [activeTab, setActiveTab] = useState<'standings' | 'schedule' | 'scorers'>('standings');
   const [liveStandings, setLiveStandings] = useState<Team[] | null>(null);
+  const [liveSchedule, setLiveSchedule] = useState<Match[] | null>(null);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -159,28 +297,28 @@ export default function SportsApp() {
     document.title = "SPORTSKN | Live Sports Statistics & Championships";
   }, []);
 
-  const fetchLeagueData = async (url: string) => {
+  const fetchLeagueData = async (standingsUrl: string, scheduleUrl?: string) => {
     setLoading(true);
     setError(null);
     try {
-      // Direct fetch from Google Sheets (published CSVs support CORS natively)
-      const response = await fetch(`${url}&cb=${Date.now()}`);
-      if (!response.ok) throw new Error("Google Sheets connection failed.");
-      const csvData = await response.text();
+      // Fetch Standings
+      const standingsResponse = await fetch(`${standingsUrl}&cb=${Date.now()}`);
+      if (!standingsResponse.ok) throw new Error("Google Sheets connection failed.");
+      const standingsCsv = await standingsResponse.text();
 
-      Papa.parse(csvData, {
+      Papa.parse(standingsCsv, {
         header: true,
         skipEmptyLines: true,
-        complete: (results) => {
-          if (results.data && results.data.length > 0) {
-            const keys = Object.keys(results.data[0] as any);
+        complete: (standingsResults) => {
+          if (standingsResults.data && standingsResults.data.length > 0) {
+            const keys = Object.keys(standingsResults.data[0] as any);
             const teamKey = keys.find(k => k.toLowerCase().includes('team')) || 'Team';
             const ptsKey = keys.find(k => k.toLowerCase() === 'pts' || k.toLowerCase().includes('points')) || 'PTS';
 
-            const mappedData: Team[] = results.data
+            const mappedStandings: Team[] = standingsResults.data
               .filter((row: any) => row[teamKey])
               .map((row: any, index: number) => ({
-                id: `live-${index}`,
+                id: `live-team-${index}`,
                 name: String(row[teamKey]),
                 played: parseInt(row['P'] || row['Played'] || 0),
                 wins: parseInt(row['W'] || row['Wins'] || 0),
@@ -188,12 +326,62 @@ export default function SportsApp() {
                 losses: parseInt(row['L'] || row['Losses'] || 0),
                 points: parseInt(row[ptsKey] || 0)
               }));
-            setLiveStandings(mappedData);
-            setLastUpdated(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+            setLiveStandings(mappedStandings);
           }
-          setLoading(false);
         }
       });
+
+      // Fetch Schedule if URL is provided
+      if (scheduleUrl) {
+        const scheduleResponse = await fetch(`${scheduleUrl}&cb=${Date.now()}`);
+        if (scheduleResponse.ok) {
+          const scheduleCsv = await scheduleResponse.text();
+          Papa.parse(scheduleCsv, {
+            header: true,
+            skipEmptyLines: true,
+            complete: (scheduleResults) => {
+              if (scheduleResults.data && scheduleResults.data.length > 0) {
+                const keys = Object.keys(scheduleResults.data[0] as any);
+                
+                // Helper to find best matching key
+                const findKey = (searchTerms: string[], defaultKey: string) => {
+                  return keys.find(k => searchTerms.some(term => k.toLowerCase() === term.toLowerCase())) || 
+                         keys.find(k => searchTerms.some(term => k.toLowerCase().includes(term.toLowerCase()))) || 
+                         defaultKey;
+                };
+
+                const homeKey = findKey(['Home', 'Home Team', 'Team 1', 'Host'], 'Home');
+                const awayKey = findKey(['Away', 'Away Team', 'Team 2', 'Visitor'], 'Away');
+                const dateKey = findKey(['Date', 'Match Date', 'Day'], 'Date');
+                const timeKey = findKey(['Time', 'Match Time', 'Kickoff'], 'Time');
+                const homeScoreKey = findKey(['Home Score', 'H Score', 'Score 1', 'Goals 1'], 'Home Score');
+                const awayScoreKey = findKey(['Away Score', 'A Score', 'Score 2', 'Goals 2'], 'Away Score');
+
+                const mappedSchedule: Match[] = scheduleResults.data.map((row: any, index: number) => {
+                  const homeScoreRaw = row[homeScoreKey];
+                  const awayScoreRaw = row[awayScoreKey];
+                  const hasScores = homeScoreRaw !== undefined && homeScoreRaw !== "" && 
+                                   awayScoreRaw !== undefined && awayScoreRaw !== "";
+                  
+                  return {
+                    id: `live-match-${index}`,
+                    home: row[homeKey] || 'TBD',
+                    away: row[awayKey] || 'TBD',
+                    date: row[dateKey] || 'TBD',
+                    time: row[timeKey] || 'TBD',
+                    homeScore: hasScores ? parseInt(homeScoreRaw) : undefined,
+                    awayScore: hasScores ? parseInt(awayScoreRaw) : undefined
+                  };
+                });
+                setLiveSchedule(mappedSchedule);
+              }
+            }
+          });
+        }
+      }
+
+      setLastUpdated(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+      setLoading(false);
     } catch (err) {
       setError("Unable to sync live data. Please check your connection.");
       setLoading(false);
@@ -202,9 +390,10 @@ export default function SportsApp() {
 
   useEffect(() => {
     if (view === 'league-detail' && selectedLeague?.csvUrl) {
-      fetchLeagueData(selectedLeague.csvUrl);
+      fetchLeagueData(selectedLeague.csvUrl, selectedLeague.scheduleCsvUrl);
     } else {
       setLiveStandings(null);
+      setLiveSchedule(null);
       setLastUpdated(null);
     }
   }, [view, selectedLeague]);
@@ -327,7 +516,7 @@ export default function SportsApp() {
               ) : (
                 <div className="pb-10">
                   {activeTab === 'standings' && <StandingsTab league={selectedLeague} liveStandings={liveStandings} lastUpdated={lastUpdated} isLoading={loading} theme={theme} />}
-                  {activeTab === 'schedule' && <ScheduleTab league={selectedLeague} theme={theme} />}
+                  {activeTab === 'schedule' && <ScheduleTab league={selectedLeague} liveSchedule={liveSchedule} theme={theme} />}
                   {activeTab === 'scorers' && <ScorersTab league={selectedLeague} theme={theme} />}
                 </div>
               )}
