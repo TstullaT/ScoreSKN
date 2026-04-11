@@ -294,7 +294,7 @@ export default function SportsApp() {
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
 
   useEffect(() => {
-    document.title = "SPORTSKN | Live Sports Statistics & Championships";
+    document.title = "SCORESKN | Live Sports Statistics & Championships";
   }, []);
 
   const fetchLeagueData = async (standingsUrl: string, scheduleUrl?: string) => {
