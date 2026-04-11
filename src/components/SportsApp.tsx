@@ -156,7 +156,7 @@ export default function SportsApp() {
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
 
   useEffect(() => {
-    document.title = "SPORTSKN";
+    document.title = "SPORTSKN | Live Sports Statistics & Championships";
   }, []);
 
   const fetchLeagueData = async (url: string) => {
@@ -224,7 +224,7 @@ export default function SportsApp() {
         <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 blur-[150px] rounded-full opacity-5 ${theme === 'dark' ? 'bg-yellow-500' : 'bg-yellow-400'}`}></div>
       </div>
 
-      <header className={`relative pt-16 pb-8 px-6 sticky top-0 z-20 backdrop-blur-md border-b transition-all overflow-hidden ${theme === 'dark' ? 'bg-slate-950/90 border-white/5 shadow-2xl shadow-black' : 'bg-white/90 border-slate-200 shadow-sm'}`}>
+      <header className={`relative pt-10 pb-4 px-6 sticky top-0 z-20 backdrop-blur-md border-b transition-all overflow-hidden ${theme === 'dark' ? 'bg-slate-950/90 border-white/5 shadow-2xl shadow-black' : 'bg-white/90 border-slate-200 shadow-sm'}`}>
         {/* Flag-themed Banner Accent */}
         <div className="absolute top-0 left-0 w-full h-1 flex">
           <div className="flex-1 bg-green-600" />
@@ -235,7 +235,7 @@ export default function SportsApp() {
         </div>
 
         <div className="max-w-md mx-auto relative">
-          <div className="flex justify-between items-center mb-6 min-h-[32px]">
+          <div className="flex justify-between items-center mb-4 min-h-[32px]">
             <div className="flex-1">
               <AnimatePresence>
                 {view !== 'home' && (
@@ -254,7 +254,7 @@ export default function SportsApp() {
             </button>
           </div>
           
-          <h1 className="text-5xl font-black italic tracking-tighter uppercase leading-none flex items-center">
+          <h1 className="text-4xl font-black italic tracking-tighter uppercase leading-none flex items-center">
             <span className={`bg-clip-text text-transparent bg-gradient-to-r from-green-600 ${theme === 'dark' ? 'to-white' : 'to-green-400'}`}>Sport</span>
             <span className="relative">
               <span className={`bg-clip-text text-transparent bg-gradient-to-r from-yellow-400 ${theme === 'dark' ? 'via-white' : 'via-black'} to-red-600 pr-6`}>Skn</span>
