@@ -155,6 +155,10 @@ export default function SportsApp() {
   const [error, setError] = useState<string | null>(null);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
 
+  useEffect(() => {
+    document.title = "SPORTSKN";
+  }, []);
+
   const fetchLeagueData = async (url: string) => {
     setLoading(true);
     setError(null);
