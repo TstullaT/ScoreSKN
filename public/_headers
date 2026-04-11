@@ -5,6 +5,10 @@
   Service-Worker-Allowed: /
 /icon.png
   Content-Type: image/png
+/*.js
+  Content-Type: application/javascript
+/*.css
+  Content-Type: text/css
 /*
   Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
   X-Content-Type-Options: nosniff

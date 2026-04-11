@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sportskn-cache-v1';
+const CACHE_NAME = 'scoreskn-cache-v2'; // Incremented version
 const urlsToCache = [
   '/',
   '/index.html',
@@ -6,10 +6,10 @@ const urlsToCache = [
 ];
 
 self.addEventListener('install', event => {
+  self.skipWaiting(); // Force the new service worker to take over immediately
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
-        console.log('Opened cache');
         return cache.addAll(urlsToCache);
       })
   );
