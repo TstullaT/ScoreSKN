@@ -32,9 +32,6 @@ async function startServer() {
     }
   });
 
-  // Serve public folder explicitly
-  app.use(express.static(path.join(__dirname, "public")));
-
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
@@ -43,8 +40,14 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
+    const distPath = path.resolve(__dirname, 'dist');
+    app.use(express.static(distPath, {
+      setHeaders: (res, filePath) => {
+        if (filePath.endsWith('.json')) {
+          res.setHeader('Content-Type', 'application/manifest+json');
+        }
+      }
+    }));
     app.get('*', (req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });
