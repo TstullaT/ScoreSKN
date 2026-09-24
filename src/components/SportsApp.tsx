@@ -1,5 +1,19 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, Trophy, Calendar, Users, ChevronRight, Loader2, Info, Sun, Moon } from "lucide-react";
+import { 
+  ChevronLeft, 
+  Trophy, 
+  Calendar, 
+  Users, 
+  ChevronRight, 
+  Loader2, 
+  Info, 
+  Sun, 
+  Moon, 
+  Search, 
+  MapPin, 
+  Clock, 
+  X 
+} from "lucide-react";
 import React, { useState, useEffect } from "react";
 import Papa from "papaparse";
 import { SPORTS_DATA, SportData, League, Team, Match } from "../types";
@@ -98,54 +112,85 @@ const StandingsTab = ({ league, liveStandings, lastUpdated, isLoading, theme }: 
 
 const ScheduleTab = ({ league, liveSchedule, theme }: { league: League, liveSchedule: Match[] | null, theme: 'light' | 'dark' }) => {
   const [showFullSchedule, setShowFullSchedule] = useState(false);
-  const scheduleToUse = (liveSchedule && liveSchedule.length > 0) ? liveSchedule : league.schedule;
-  
-  // Robust Date filtering logic
+  const [filterType, setFilterType] = useState<'all' | 'upcoming' | 'results'>('all');
+  const [selectedMatchweek, setSelectedMatchweek] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const scheduleToUse = (liveSchedule && liveSchedule.length > 0)
+    ? liveSchedule
+    : league.schedule;
+
+  // Robust Date parsing logic
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
   const parseMatchDate = (dateStr: string) => {
     if (!dateStr) return null;
-    
-    // Try standard parsing first
     let d = new Date(dateStr);
-    
-    // If invalid, try common SKN formats like DD/MM/YYYY or DD/MM
     if (isNaN(d.getTime())) {
       const parts = dateStr.split(/[\/\-\.]/);
       if (parts.length >= 2) {
-        const day = parseInt(parts[0]);
-        const month = parseInt(parts[1]) - 1; // 0-indexed
+        const p0 = parseInt(parts[0]);
+        const p1 = parseInt(parts[1]);
         const year = parts.length === 3 ? parseInt(parts[2]) : today.getFullYear();
-        
-        // Handle 2-digit years
         const fullYear = year < 100 ? 2000 + year : year;
-        
-        d = new Date(fullYear, month, day);
+        if (p0 > 12) {
+          d = new Date(fullYear, p1 - 1, p0);
+        } else {
+          d = new Date(fullYear, p0 - 1, p1);
+        }
       }
     }
-
     if (isNaN(d.getTime())) return null;
     d.setHours(0, 0, 0, 0);
     return d;
   };
 
-  // Find the next available match date (today or in the future)
-  const uniqueDates = Array.from(new Set(scheduleToUse.map(m => m.date)))
-    .map(dStr => ({ str: dStr, date: parseMatchDate(dStr) }))
-    .filter(d => d.date !== null)
-    .sort((a, b) => a.date!.getTime() - b.date!.getTime());
+  // Extract unique matchweeks
+  const matchweeks: string[] = Array.from(new Set(scheduleToUse.map(m => m.matchweek).filter((mw): mw is string => Boolean(mw))));
 
-  // 1. Try to find today or future
+  // Filter schedule based on user criteria
+  const filtered = scheduleToUse.filter((match) => {
+    // Search query filter
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      const matchText = `${match.home} ${match.away} ${match.venue || ''} ${match.date}`.toLowerCase();
+      if (!matchText.includes(q)) return false;
+    }
+
+    // Matchweek filter
+    if (selectedMatchweek !== 'all') {
+      if (match.matchweek !== selectedMatchweek) return false;
+    }
+
+    const hasScores = match.homeScore !== undefined && match.awayScore !== undefined;
+    if (filterType === 'results') {
+      return hasScores;
+    }
+    if (filterType === 'upcoming') {
+      return !hasScores;
+    }
+
+    return true;
+  });
+
+  // Find next match date if not showing full schedule
+  const uniqueDates = Array.from(new Set<string>(filtered.map(m => m.date)))
+    .map((dStr: string) => ({ str: dStr, date: parseMatchDate(dStr) }))
+    .filter((d): d is { str: string; date: Date } => d.date !== null)
+    .sort((a, b) => a.date.getTime() - b.date.getTime());
+
   let nextMatchDateObj = uniqueDates.find(d => d.date! >= today);
-  
-  // 2. If no future matches, fallback to the MOST RECENT past date (last in sorted list)
   if (!nextMatchDateObj && uniqueDates.length > 0) {
     nextMatchDateObj = uniqueDates[uniqueDates.length - 1];
   }
 
-  const nextMatchDateStr = nextMatchDateObj?.str;
-  
+  const displayedMatches = showFullSchedule || searchQuery.trim() || filterType !== 'all' || selectedMatchweek !== 'all'
+    ? filtered
+    : (nextMatchDateObj ? filtered.filter(m => m.date === nextMatchDateObj?.str) : filtered);
+
+  const hasMore = filtered.length > displayedMatches.length;
+
   const getOrdinal = (d: number) => {
     if (d > 3 && d < 21) return 'th';
     switch (d % 10) {
@@ -163,81 +208,203 @@ const ScheduleTab = ({ league, liveSchedule, theme }: { league: League, liveSche
     return `${month} ${day}${getOrdinal(day)}`;
   };
 
-  const filteredSchedule = showFullSchedule 
-    ? scheduleToUse 
-    : scheduleToUse.filter(m => m.date === nextMatchDateStr);
-
-  const hasMore = scheduleToUse.length > filteredSchedule.length;
-
   return (
-    <div className="space-y-3">
-      {!showFullSchedule && nextMatchDateObj && (
-        <div className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest mb-4 text-center ${theme === 'dark' ? 'bg-green-500/10 text-green-400' : 'bg-green-50 text-green-600'}`}>
-          Showing matches for: {formatFriendlyDate(nextMatchDateObj.date)}
+    <div className="space-y-4">
+      {/* Search & Filter Controls */}
+      <div className="space-y-2">
+        <div className="relative">
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search teams or venues..."
+            className={`w-full pl-9 pr-8 py-2 rounded-xl text-xs transition-colors border ${
+              theme === 'dark' 
+                ? 'bg-black/30 border-white/10 text-white placeholder-slate-500 focus:border-green-500' 
+                : 'bg-white border-slate-200 text-slate-800 placeholder-slate-400 focus:border-green-500'
+            }`}
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery("")}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+
+        {/* Filter Pills */}
+        <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+          {(['all', 'upcoming', 'results'] as const).map((type) => (
+            <button
+              key={type}
+              onClick={() => { setFilterType(type); setShowFullSchedule(true); }}
+              className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all whitespace-nowrap ${
+                filterType === type 
+                  ? 'bg-green-600 text-white shadow-sm' 
+                  : theme === 'dark' 
+                    ? 'bg-white/5 text-slate-400 hover:bg-white/10' 
+                    : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+              }`}
+            >
+              {type}
+            </button>
+          ))}
+
+          {matchweeks.length > 0 && (
+            <>
+              <div className="w-[1px] h-5 bg-white/10 self-center mx-1 shrink-0" />
+              {matchweeks.map((mw) => (
+                <button
+                  key={mw}
+                  onClick={() => {
+                    setSelectedMatchweek(selectedMatchweek === mw ? 'all' : mw);
+                    setShowFullSchedule(true);
+                  }}
+                  className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all whitespace-nowrap ${
+                    selectedMatchweek === mw
+                      ? 'bg-yellow-500 text-black shadow-sm font-black'
+                      : theme === 'dark'
+                        ? 'bg-white/5 text-slate-400 hover:bg-white/10'
+                        : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                  }`}
+                >
+                  {mw}
+                </button>
+              ))}
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Next Match Banner (when single day view is active) */}
+      {!showFullSchedule && !searchQuery && filterType === 'all' && selectedMatchweek === 'all' && nextMatchDateObj && (
+        <div className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest text-center flex justify-between items-center ${
+          theme === 'dark' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-green-50 text-green-700 border border-green-200'
+        }`}>
+          <span>Scheduled for: {formatFriendlyDate(nextMatchDateObj.date)}</span>
+          <button 
+            onClick={() => setShowFullSchedule(true)}
+            className="underline hover:opacity-80"
+          >
+            Show All
+          </button>
         </div>
       )}
 
-      {filteredSchedule.length > 0 ? filteredSchedule.map((match) => {
-        const hasScores = match.homeScore !== undefined && match.awayScore !== undefined;
-        const homeWinner = hasScores && match.homeScore! > match.awayScore!;
-        const awayWinner = hasScores && match.awayScore! > match.homeScore!;
-        
-        return (
-          <div key={match.id} className={`p-4 rounded-xl border shadow-sm ${theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-white border-slate-200'}`}>
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{match.date}</span>
-              {!hasScores && (
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${theme === 'dark' ? 'text-green-400 bg-green-900/30' : 'text-green-600 bg-green-50'}`}>{match.time}</span>
-              )}
-              {hasScores && (
-                <span className={`text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-tighter ${theme === 'dark' ? 'text-yellow-500 bg-yellow-500/10' : 'text-red-600 bg-red-50'}`}>Final Score</span>
-              )}
-            </div>
-            <div className="flex items-center justify-between gap-4">
-              <div className={`flex-1 text-right font-black italic text-sm transition-colors ${
-                homeWinner 
-                  ? (theme === 'dark' ? 'text-green-400' : 'text-green-600') 
-                  : (theme === 'dark' ? 'text-white' : 'text-slate-800')
-              }`}>
-                {match.home}
-              </div>
-              
-              <div className="flex items-center gap-2">
-                {hasScores ? (
-                  <div className={`flex items-center gap-3 px-3 py-1 rounded-lg font-mono font-black text-lg ${theme === 'dark' ? 'bg-white/5 text-white' : 'bg-slate-100 text-slate-900'}`}>
-                    <span className={homeWinner ? (theme === 'dark' ? 'text-green-400' : 'text-green-600') : ''}>{match.homeScore}</span>
-                    <span className="text-slate-400 text-xs">-</span>
-                    <span className={awayWinner ? (theme === 'dark' ? 'text-green-400' : 'text-green-600') : ''}>{match.awayScore}</span>
-                  </div>
-                ) : (
-                  <div className="text-slate-400 text-[10px] font-black italic">VS</div>
-                )}
-              </div>
+      {/* Match Cards List */}
+      {displayedMatches.length > 0 ? (
+        <div className="space-y-3">
+          {displayedMatches.map((match) => {
+            const hasScores = match.homeScore !== undefined && match.awayScore !== undefined;
+            const homeWinner = hasScores && match.homeScore! > match.awayScore!;
+            const awayWinner = hasScores && match.awayScore! > match.homeScore!;
+            const isDraw = hasScores && match.homeScore! === match.awayScore!;
 
-              <div className={`flex-1 text-left font-black italic text-sm transition-colors ${
-                awayWinner 
-                  ? (theme === 'dark' ? 'text-green-400' : 'text-green-600') 
-                  : (theme === 'dark' ? 'text-white' : 'text-slate-800')
-              }`}>
-                {match.away}
+            return (
+              <div 
+                key={match.id} 
+                className={`p-4 rounded-xl border shadow-sm transition-all hover:scale-[1.01] ${
+                  theme === 'dark' ? 'bg-white/5 border-white/10 hover:border-white/20' : 'bg-white border-slate-200 hover:border-slate-300'
+                }`}
+              >
+                {/* Match Header: Matchweek, Venue, Date & Time */}
+                <div className="flex justify-between items-center mb-2.5 gap-2 flex-wrap">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {match.matchweek && (
+                      <span className="text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider bg-yellow-500/10 text-yellow-500 border border-yellow-500/20">
+                        {match.matchweek}
+                      </span>
+                    )}
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                      {match.date}
+                    </span>
+                    {match.venue && (
+                      <span className="text-[9px] text-slate-500 flex items-center gap-0.5">
+                        <MapPin className="w-2.5 h-2.5 text-red-500" />
+                        {match.venue}
+                      </span>
+                    )}
+                  </div>
+
+                  {!hasScores ? (
+                    <span className={`text-[10px] font-black px-2 py-0.5 rounded flex items-center gap-1 ${
+                      theme === 'dark' ? 'text-green-400 bg-green-900/30' : 'text-green-600 bg-green-50'
+                    }`}>
+                      <Clock className="w-3 h-3" />
+                      {match.time}
+                    </span>
+                  ) : (
+                    <span className={`text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-tight ${
+                      theme === 'dark' ? 'text-yellow-400 bg-yellow-500/10 border border-yellow-500/20' : 'text-red-600 bg-red-50 border border-red-100'
+                    }`}>
+                      {isDraw ? "Draw" : "Final"}
+                    </span>
+                  )}
+                </div>
+
+                {/* Match Body: Home vs Away */}
+                <div className="flex items-center justify-between gap-4">
+                  <div className={`flex-1 text-right font-black italic text-sm transition-colors uppercase ${
+                    homeWinner 
+                      ? (theme === 'dark' ? 'text-green-400' : 'text-green-600') 
+                      : (theme === 'dark' ? 'text-white' : 'text-slate-800')
+                  }`}>
+                    {match.home}
+                  </div>
+                  
+                  <div className="flex items-center gap-2 shrink-0">
+                    {hasScores ? (
+                      <div className={`flex items-center gap-2.5 px-3 py-1 rounded-lg font-mono font-black text-lg ${
+                        theme === 'dark' ? 'bg-white/10 text-white' : 'bg-slate-100 text-slate-900'
+                      }`}>
+                        <span className={homeWinner ? (theme === 'dark' ? 'text-green-400' : 'text-green-600') : ''}>{match.homeScore}</span>
+                        <span className="text-slate-400 text-xs">-</span>
+                        <span className={awayWinner ? (theme === 'dark' ? 'text-green-400' : 'text-green-600') : ''}>{match.awayScore}</span>
+                      </div>
+                    ) : (
+                      <div className="text-slate-400 text-[10px] font-black italic px-2 py-1 rounded bg-black/10">VS</div>
+                    )}
+                  </div>
+
+                  <div className={`flex-1 text-left font-black italic text-sm transition-colors uppercase ${
+                    awayWinner 
+                      ? (theme === 'dark' ? 'text-green-400' : 'text-green-600') 
+                      : (theme === 'dark' ? 'text-white' : 'text-slate-800')
+                  }`}>
+                    {match.away}
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-        );
-      }) : (
-        <div className="text-center py-12 text-slate-400 italic font-medium">No matches on the horizon.</div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className={`text-center py-12 rounded-2xl border ${theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-white border-slate-200'} p-8`}>
+          <Calendar className="w-8 h-8 mx-auto mb-2 text-slate-400" />
+          <p className="text-xs font-bold uppercase tracking-wider text-slate-400">No matches found for this filter.</p>
+          <button
+            onClick={() => { setSearchQuery(""); setFilterType("all"); setSelectedMatchweek("all"); setShowFullSchedule(true); }}
+            className="mt-3 text-[10px] font-black uppercase text-green-500 underline"
+          >
+            Clear Filters
+          </button>
+        </div>
       )}
 
-      {hasMore && (
+      {/* Show Full Schedule Button */}
+      {hasMore && !showFullSchedule && (
         <button 
           onClick={() => setShowFullSchedule(true)}
-          className={`w-full py-4 mt-4 rounded-xl border-2 border-dashed font-black uppercase tracking-[0.2em] text-[10px] transition-all hover:scale-[1.02] active:scale-95 ${
+          className={`w-full py-3.5 mt-2 rounded-xl border-2 border-dashed font-black uppercase tracking-[0.2em] text-[10px] transition-all hover:scale-[1.01] active:scale-95 ${
             theme === 'dark' 
               ? 'border-white/10 text-slate-400 hover:border-green-500/50 hover:text-green-400' 
               : 'border-slate-200 text-slate-500 hover:border-green-500/50 hover:text-green-600'
           }`}
         >
-          View Full Schedule
+          View Full Season Schedule ({scheduleToUse.length} Matches)
         </button>
       )}
     </div>
@@ -301,10 +468,18 @@ export default function SportsApp() {
     setLoading(true);
     setError(null);
     try {
-      // Fetch Standings
-      const standingsResponse = await fetch(`${standingsUrl}&cb=${Date.now()}`);
-      if (!standingsResponse.ok) throw new Error("Google Sheets connection failed.");
-      const standingsCsv = await standingsResponse.text();
+      // Fetch Standings (prefer proxy for CORS and redirects)
+      const fetchCsv = async (url: string) => {
+        try {
+          const proxyRes = await fetch(`/api/proxy-csv?url=${encodeURIComponent(url)}`);
+          if (proxyRes.ok) return await proxyRes.text();
+        } catch {}
+        const directRes = await fetch(`${url}&cb=${Date.now()}`);
+        if (!directRes.ok) throw new Error("Connection failed");
+        return await directRes.text();
+      };
+
+      const standingsCsv = await fetchCsv(standingsUrl);
 
       Papa.parse(standingsCsv, {
         header: true,
@@ -333,9 +508,8 @@ export default function SportsApp() {
 
       // Fetch Schedule if URL is provided
       if (scheduleUrl) {
-        const scheduleResponse = await fetch(`${scheduleUrl}&cb=${Date.now()}`);
-        if (scheduleResponse.ok) {
-          const scheduleCsv = await scheduleResponse.text();
+        try {
+          const scheduleCsv = await fetchCsv(scheduleUrl);
           Papa.parse(scheduleCsv, {
             header: true,
             skipEmptyLines: true,
@@ -343,40 +517,50 @@ export default function SportsApp() {
               if (scheduleResults.data && scheduleResults.data.length > 0) {
                 const keys = Object.keys(scheduleResults.data[0] as any);
                 
-                // Helper to find best matching key
                 const findKey = (searchTerms: string[], defaultKey: string) => {
                   return keys.find(k => searchTerms.some(term => k.toLowerCase() === term.toLowerCase())) || 
                          keys.find(k => searchTerms.some(term => k.toLowerCase().includes(term.toLowerCase()))) || 
                          defaultKey;
                 };
 
-                const homeKey = findKey(['Home', 'Home Team', 'Team 1', 'Host'], 'Home');
-                const awayKey = findKey(['Away', 'Away Team', 'Team 2', 'Visitor'], 'Away');
+                const homeKey = findKey(['Home', 'Home Team', 'Team A', 'Team 1', 'Host'], 'Home');
+                const awayKey = findKey(['Away', 'Away Team', 'Team B', 'Team 2', 'Visitor'], 'Away');
                 const dateKey = findKey(['Date', 'Match Date', 'Day'], 'Date');
                 const timeKey = findKey(['Time', 'Match Time', 'Kickoff'], 'Time');
+                const venueKey = findKey(['Venue', 'Stadium', 'Location', 'Field'], 'Venue');
+                const matchweekKey = findKey(['Matchweek', 'Round', 'Week'], 'Matchweek');
                 const homeScoreKey = findKey(['Home Score', 'H Score', 'Score 1', 'Goals 1'], 'Home Score');
                 const awayScoreKey = findKey(['Away Score', 'A Score', 'Score 2', 'Goals 2'], 'Away Score');
 
-                const mappedSchedule: Match[] = scheduleResults.data.map((row: any, index: number) => {
-                  const homeScoreRaw = row[homeScoreKey];
-                  const awayScoreRaw = row[awayScoreKey];
-                  const hasScores = homeScoreRaw !== undefined && homeScoreRaw !== "" && 
-                                   awayScoreRaw !== undefined && awayScoreRaw !== "";
-                  
-                  return {
-                    id: `live-match-${index}`,
-                    home: row[homeKey] || 'TBD',
-                    away: row[awayKey] || 'TBD',
-                    date: row[dateKey] || 'TBD',
-                    time: row[timeKey] || 'TBD',
-                    homeScore: hasScores ? parseInt(homeScoreRaw) : undefined,
-                    awayScore: hasScores ? parseInt(awayScoreRaw) : undefined
-                  };
-                });
-                setLiveSchedule(mappedSchedule);
+                const mappedSchedule: Match[] = scheduleResults.data
+                  .filter((row: any) => row[homeKey] && row[awayKey])
+                  .map((row: any, index: number) => {
+                    const homeScoreRaw = row[homeScoreKey];
+                    const awayScoreRaw = row[awayScoreKey];
+                    const hasScores = homeScoreRaw !== undefined && homeScoreRaw !== "" && 
+                                     awayScoreRaw !== undefined && awayScoreRaw !== "";
+                    
+                    return {
+                      id: `live-match-${index}`,
+                      home: row[homeKey] || 'TBD',
+                      away: row[awayKey] || 'TBD',
+                      date: row[dateKey] || 'TBD',
+                      time: row[timeKey] || 'TBD',
+                      venue: row[venueKey] || 'NBG Technical Center',
+                      matchweek: row[matchweekKey] || undefined,
+                      homeScore: hasScores ? parseInt(homeScoreRaw) : undefined,
+                      awayScore: hasScores ? parseInt(awayScoreRaw) : undefined
+                    };
+                  });
+
+                if (mappedSchedule.length > 0) {
+                  setLiveSchedule(mappedSchedule);
+                }
               }
             }
           });
+        } catch (schedErr) {
+          console.warn("Could not load schedule CSV:", schedErr);
         }
       }
 
@@ -444,7 +628,7 @@ export default function SportsApp() {
           </div>
           
           <h1 className="text-4xl font-black italic tracking-tighter uppercase leading-none flex items-center">
-            <span className={`bg-clip-text text-transparent bg-gradient-to-r from-green-600 ${theme === 'dark' ? 'to-white' : 'to-green-400'}`}>Sport</span>
+            <span className={`bg-clip-text text-transparent bg-gradient-to-r from-green-600 ${theme === 'dark' ? 'to-white' : 'to-green-400'}`}>Score</span>
             <span className="relative">
               <span className={`bg-clip-text text-transparent bg-gradient-to-r from-yellow-400 ${theme === 'dark' ? 'via-white' : 'via-black'} to-red-600 pr-6`}>Skn</span>
             </span>

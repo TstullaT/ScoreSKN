@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#020617"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#22c55e"/>
+      <stop offset="50%" stop-color="#eab308"/>
+      <stop offset="100%" stop-color="#ef4444"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="108" fill="url(#bgGrad)"/>
+  <circle cx="256" cy="256" r="210" fill="none" stroke="url(#accentGrad)" stroke-width="8" opacity="0.8"/>
+  <path d="M256 70 L390 120 V250 C390 340 330 405 256 440 C182 405 122 340 122 250 V120 Z" fill="#090d16" stroke="#22c55e" stroke-width="6"/>
+  <!-- Soccer ball geometry -->
+  <g transform="translate(256, 235)">
+    <circle cx="0" cy="0" r="75" fill="#f8fafc" stroke="#0f172a" stroke-width="4"/>
+    <polygon points="0,-35 33,-11 20,28 -20,28 -33,-11" fill="#0f172a"/>
+    <line x1="0" y1="-35" x2="0" y2="-75" stroke="#0f172a" stroke-width="4"/>
+    <line x1="33" y1="-11" x2="71" y2="-24" stroke="#0f172a" stroke-width="4"/>
+    <line x1="20" y1="28" x2="44" y2="61" stroke="#0f172a" stroke-width="4"/>
+    <line x1="-20" y1="28" x2="-44" y2="61" stroke="#0f172a" stroke-width="4"/>
+    <line x1="-33" y1="-11" x2="-71" y2="-24" stroke="#0f172a" stroke-width="4"/>
+  </g>
+  <!-- Flag ribbons -->
+  <path d="M160 350 L256 370 L352 350 L352 375 L256 395 L160 375 Z" fill="#eab308"/>
+  <text x="256" y="420" text-anchor="middle" font-family="sans-serif" font-weight="900" font-style="italic" font-size="28" fill="#ffffff" letter-spacing="4">SCORESKN</text>
+</svg>
