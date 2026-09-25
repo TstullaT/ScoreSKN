@@ -148,7 +148,7 @@ function extractMatchesFromText(rawText: string): ParsedMatch[] {
 
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
   const publicPath = path.resolve(__dirname, "public");
 
   // Global CORS and security headers for PWABuilder, Lighthouse, and TWA verification
@@ -318,9 +318,22 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+  const DEV_PORT = 3000;
+  const envPort = process.env.PORT ? parseInt(process.env.PORT, 10) : undefined;
+
+  app.listen(DEV_PORT, "0.0.0.0", () => {
+    console.log(`Server running on http://localhost:${DEV_PORT}`);
   });
+
+  if (envPort && envPort !== DEV_PORT && !isNaN(envPort)) {
+    try {
+      app.listen(envPort, "0.0.0.0", () => {
+        console.log(`Cloud Run server also listening on http://0.0.0.0:${envPort}`);
+      });
+    } catch (e) {
+      console.warn("Could not bind additional port:", e);
+    }
+  }
 }
 
 startServer();

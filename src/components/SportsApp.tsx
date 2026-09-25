@@ -640,19 +640,6 @@ export default function SportsApp() {
             
             <div className="flex items-center gap-2">
               <button 
-                onClick={() => setShowIconModal(true)} 
-                title="Download 512x512 PWA Icon"
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-black uppercase tracking-wider transition-all ${
-                  theme === 'dark' 
-                    ? 'bg-green-500/10 border-green-500/30 text-green-400 hover:bg-green-500/20' 
-                    : 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100 shadow-sm'
-                }`}
-              >
-                <Download className="w-3 h-3" />
-                <span>512x512 Icon</span>
-              </button>
-
-              <button 
                 onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')} 
                 className={`p-2 rounded-full border transition-all ${theme === 'dark' ? 'bg-white/5 border-white/10 text-yellow-400' : 'bg-white border-slate-200 text-slate-600 shadow-sm'}`}
               >
