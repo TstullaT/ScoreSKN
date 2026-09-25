@@ -184,6 +184,49 @@ async function startServer() {
     res.sendFile(path.join(publicPath, ".well-known", "assetlinks.json"));
   });
 
+  // Direct download endpoints for PWA Builder & manual uploads
+  app.get("/download/manifest.json", (req, res) => {
+    res.setHeader("Content-Type", "application/manifest+json; charset=utf-8");
+    res.setHeader("Content-Disposition", 'attachment; filename="manifest.json"');
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.sendFile(path.join(publicPath, "manifest.json"));
+  });
+
+  app.get("/download/icon-192.png", (req, res) => {
+    res.setHeader("Content-Type", "image/png");
+    res.setHeader("Content-Disposition", 'attachment; filename="scoreskn-192x192.png"');
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.sendFile(path.join(publicPath, "pwa-192x192.png"));
+  });
+
+  app.get("/download/icon-512.png", (req, res) => {
+    res.setHeader("Content-Type", "image/png");
+    res.setHeader("Content-Disposition", 'attachment; filename="scoreskn-512x512.png"');
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.sendFile(path.join(publicPath, "pwa-512x512.png"));
+  });
+
+  app.get("/download/icon-maskable-512.png", (req, res) => {
+    res.setHeader("Content-Type", "image/png");
+    res.setHeader("Content-Disposition", 'attachment; filename="scoreskn-maskable-512x512.png"');
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.sendFile(path.join(publicPath, "pwa-maskable-512x512.png"));
+  });
+
+  app.get("/download/icon-1024.png", (req, res) => {
+    res.setHeader("Content-Type", "image/png");
+    res.setHeader("Content-Disposition", 'attachment; filename="scoreskn-1024x1024.png"');
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.sendFile(path.join(publicPath, "pwa-1024x1024.png"));
+  });
+
+  app.get("/download/icon-maskable-1024.png", (req, res) => {
+    res.setHeader("Content-Type", "image/png");
+    res.setHeader("Content-Disposition", 'attachment; filename="scoreskn-maskable-1024x1024.png"');
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.sendFile(path.join(publicPath, "pwa-maskable-1024x1024.png"));
+  });
+
   // Serve static files from public with CORS
   app.use(express.static(publicPath, {
     setHeaders: (res, filePath) => {

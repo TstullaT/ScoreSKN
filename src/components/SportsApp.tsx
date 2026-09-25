@@ -12,7 +12,12 @@ import {
   Search, 
   MapPin, 
   Clock, 
-  X 
+  Download,
+  ExternalLink,
+  X,
+  Copy,
+  Check,
+  FileCode
 } from "lucide-react";
 import React, { useState, useEffect } from "react";
 import Papa from "papaparse";
@@ -459,6 +464,20 @@ export default function SportsApp() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [showIconModal, setShowIconModal] = useState(false);
+  const [copiedManifest, setCopiedManifest] = useState(false);
+
+  const handleCopyManifest = async () => {
+    try {
+      const res = await fetch("/manifest.json");
+      const text = await res.text();
+      await navigator.clipboard.writeText(text);
+      setCopiedManifest(true);
+      setTimeout(() => setCopiedManifest(false), 3000);
+    } catch (err) {
+      console.error("Failed to copy manifest:", err);
+    }
+  };
 
   useEffect(() => {
     document.title = "SCORESKN | Live Sports Statistics & Championships";
@@ -619,12 +638,27 @@ export default function SportsApp() {
               </AnimatePresence>
             </div>
             
-            <button 
-              onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')} 
-              className={`p-2 rounded-full border transition-all ${theme === 'dark' ? 'bg-white/5 border-white/10 text-yellow-400' : 'bg-white border-slate-200 text-slate-600 shadow-sm'}`}
-            >
-              {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
-            </button>
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => setShowIconModal(true)} 
+                title="Download 512x512 PWA Icon"
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-black uppercase tracking-wider transition-all ${
+                  theme === 'dark' 
+                    ? 'bg-green-500/10 border-green-500/30 text-green-400 hover:bg-green-500/20' 
+                    : 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100 shadow-sm'
+                }`}
+              >
+                <Download className="w-3 h-3" />
+                <span>512x512 Icon</span>
+              </button>
+
+              <button 
+                onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')} 
+                className={`p-2 rounded-full border transition-all ${theme === 'dark' ? 'bg-white/5 border-white/10 text-yellow-400' : 'bg-white border-slate-200 text-slate-600 shadow-sm'}`}
+              >
+                {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+              </button>
+            </div>
           </div>
           
           <h1 className="text-4xl font-black italic tracking-tighter uppercase leading-none flex items-center">
@@ -722,9 +756,176 @@ export default function SportsApp() {
             Privacy Policy
           </a>
           <span>•</span>
+          <button
+            onClick={() => setShowIconModal(true)}
+            className="text-green-500 hover:text-green-400 underline transition-colors font-semibold"
+          >
+            Download 512x512 PWA Icon
+          </button>
+          <span>•</span>
           <span className="text-slate-500">v1.0.0</span>
         </div>
       </footer>
+
+      {/* PWA Icon Asset Modal */}
+      <AnimatePresence>
+        {showIconModal && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+          >
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className={`w-full max-w-md max-h-[90vh] overflow-y-auto rounded-3xl p-6 shadow-2xl border ${
+                theme === 'dark' 
+                  ? 'bg-slate-900 border-white/10 text-white' 
+                  : 'bg-white border-slate-200 text-slate-900'
+              }`}
+            >
+              <div className="flex items-center justify-between pb-4 border-b border-white/10 mb-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-green-500/20 text-green-500 flex items-center justify-center font-black">
+                    512
+                  </div>
+                  <div>
+                    <h3 className="text-base font-black uppercase tracking-tight">PWA App Icons</h3>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Ready for PWABuilder & Google Play Store</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setShowIconModal(false)}
+                  className="p-1.5 rounded-full hover:bg-white/10 text-slate-400 hover:text-white transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Manifest JSON section */}
+              <div className={`p-4 rounded-2xl border mb-4 ${theme === 'dark' ? 'bg-green-950/20 border-green-500/20' : 'bg-green-50/60 border-green-200'}`}>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <FileCode className="w-4 h-4 text-green-500" />
+                    <span className="text-xs font-black uppercase tracking-tight">Android PWA Manifest</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={handleCopyManifest}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 bg-green-600 hover:bg-green-500 text-white rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all"
+                    >
+                      {copiedManifest ? <Check className="w-3 h-3 text-white" /> : <Copy className="w-3 h-3" />}
+                      {copiedManifest ? "Copied!" : "Copy Code"}
+                    </button>
+                    <a
+                      href="/download/manifest.json"
+                      download="manifest.json"
+                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all border ${
+                        theme === 'dark' ? 'bg-white/5 border-white/10 text-white hover:bg-white/10' : 'bg-white border-slate-200 text-slate-800 hover:bg-slate-50'
+                      }`}
+                    >
+                      <Download className="w-3 h-3" />
+                      Download JSON
+                    </a>
+                  </div>
+                </div>
+                <p className="text-[10px] text-slate-400">
+                  Updated with ID: <code className="text-green-400 font-mono">com.gtsgaming.scoreskn</code> and embedded base64 icon data URIs for instant PWABuilder validation.
+                </p>
+              </div>
+
+              {/* Standard 512x512 Asset */}
+              <div className={`p-4 rounded-2xl border mb-3 ${theme === 'dark' ? 'bg-slate-950/60 border-white/10' : 'bg-slate-50 border-slate-200'}`}>
+                <div className="flex items-center gap-4">
+                  <img 
+                    src="/pwa-512x512.png" 
+                    alt="SCORESKN 512x512 PWA Icon" 
+                    className="w-16 h-16 rounded-2xl shadow-md border border-white/10 object-contain bg-slate-950 flex-shrink-0"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-green-500/20 text-green-400 border border-green-500/30">
+                      Standard Icon (512×512)
+                    </span>
+                    <h4 className="text-xs font-black uppercase tracking-tight mt-1 truncate">SCORESKN 512x512</h4>
+                    <p className="text-[10px] text-slate-400 mt-0.5">512 × 512 PNG • Full Bleed</p>
+                    <a
+                      href="/download/icon-512.png"
+                      download="scoreskn-512x512.png"
+                      className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-500 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-sm"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      Download 512x512 PNG
+                    </a>
+                  </div>
+                </div>
+              </div>
+
+              {/* Maskable 1024x1024 Asset */}
+              <div className={`p-4 rounded-2xl border mb-3 ${theme === 'dark' ? 'bg-slate-950/60 border-white/10' : 'bg-slate-50 border-slate-200'}`}>
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 rounded-full overflow-hidden shadow-md border border-white/10 bg-slate-950 flex-shrink-0 flex items-center justify-center">
+                    <img 
+                      src="/pwa-maskable-1024x1024.png" 
+                      alt="SCORESKN 1024x1024 Maskable Icon" 
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
+                      Android Adaptive / Maskable (1024×1024)
+                    </span>
+                    <h4 className="text-xs font-black uppercase tracking-tight mt-1 truncate">Maskable 1024x1024</h4>
+                    <p className="text-[10px] text-slate-400 mt-0.5">1024 × 1024 PNG • Google Play / Android PWA</p>
+                    <div className="flex gap-2 mt-2">
+                      <a
+                        href="/download/icon-maskable-1024.png"
+                        download="scoreskn-maskable-1024x1024.png"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white border border-white/10 rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-sm"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        Download 1024 Maskable
+                      </a>
+                      <a
+                        href="/download/icon-192.png"
+                        download="scoreskn-192x192.png"
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all border ${
+                          theme === 'dark' ? 'bg-white/5 border-white/10 text-slate-300 hover:bg-white/10' : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
+                        }`}
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        192x192
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Quick PWABuilder Instructions */}
+              <div className="p-3.5 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-[11px] text-slate-300">
+                <p className="font-bold text-blue-400 uppercase tracking-wide text-[10px] mb-1">
+                  How to upload or update in PWABuilder:
+                </p>
+                <ol className="list-decimal list-inside space-y-1 text-slate-300">
+                  <li>In PWABuilder, click <strong>Manifest &gt; Edit Manifest</strong>.</li>
+                  <li>Click <strong>Copy Code</strong> above and paste directly into PWABuilder!</li>
+                  <li>All icons are embedded via base64, so PWABuilder validates and passes 100% instantly without any download errors.</li>
+                </ol>
+              </div>
+
+              <div className="mt-4 pt-3 border-t border-white/10 flex justify-end">
+                <button
+                  onClick={() => setShowIconModal(false)}
+                  className="px-4 py-2 bg-white/10 hover:bg-white/20 text-xs font-bold uppercase tracking-wider rounded-xl transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
