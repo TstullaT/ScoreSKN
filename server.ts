@@ -149,6 +149,50 @@ function extractMatchesFromText(rawText: string): ParsedMatch[] {
 async function startServer() {
   const app = express();
   const PORT = 3000;
+  const publicPath = path.resolve(__dirname, "public");
+
+  // Global CORS and security headers for PWABuilder, Lighthouse, and TWA verification
+  app.use((req, res, next) => {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS, HEAD");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
+    if (req.method === "OPTIONS") {
+      return res.sendStatus(200);
+    }
+    next();
+  });
+
+  // Explicit PWA Manifest serving with compliant MIME type and CORS
+  app.get(["/manifest.json", "/manifest.webmanifest"], (req, res) => {
+    res.setHeader("Content-Type", "application/manifest+json; charset=utf-8");
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.sendFile(path.join(publicPath, "manifest.json"));
+  });
+
+  // Service Worker route with Service-Worker-Allowed root scope
+  app.get("/sw.js", (req, res) => {
+    res.setHeader("Content-Type", "application/javascript; charset=utf-8");
+    res.setHeader("Service-Worker-Allowed", "/");
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.sendFile(path.join(publicPath, "sw.js"));
+  });
+
+  // Digital Asset Links for Google Play Store Trusted Web Activity (TWA)
+  app.get("/.well-known/assetlinks.json", (req, res) => {
+    res.setHeader("Content-Type", "application/json; charset=utf-8");
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.sendFile(path.join(publicPath, ".well-known", "assetlinks.json"));
+  });
+
+  // Serve static files from public with CORS
+  app.use(express.static(publicPath, {
+    setHeaders: (res, filePath) => {
+      res.setHeader("Access-Control-Allow-Origin", "*");
+      if (filePath.endsWith(".json")) {
+        res.setHeader("Content-Type", "application/manifest+json; charset=utf-8");
+      }
+    }
+  }));
 
   app.use(express.json({ limit: "50mb" }));
   app.use(express.raw({ type: ["application/pdf", "application/octet-stream"], limit: "50mb" }));

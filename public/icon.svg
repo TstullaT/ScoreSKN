@@ -10,8 +10,8 @@
       <stop offset="100%" stop-color="#ef4444"/>
     </linearGradient>
   </defs>
-  <rect width="512" height="512" rx="108" fill="url(#bgGrad)"/>
-  <circle cx="256" cy="256" r="210" fill="none" stroke="url(#accentGrad)" stroke-width="8" opacity="0.8"/>
+  <rect width="512" height="512" fill="url(#bgGrad)"/>
+  <circle cx="256" cy="256" r="215" fill="none" stroke="url(#accentGrad)" stroke-width="8" opacity="0.85"/>
   <path d="M256 70 L390 120 V250 C390 340 330 405 256 440 C182 405 122 340 122 250 V120 Z" fill="#090d16" stroke="#22c55e" stroke-width="6"/>
   <!-- Soccer ball geometry -->
   <g transform="translate(256, 235)">
@@ -25,5 +25,5 @@
   </g>
   <!-- Flag ribbons -->
   <path d="M160 350 L256 370 L352 350 L352 375 L256 395 L160 375 Z" fill="#eab308"/>
-  <text x="256" y="420" text-anchor="middle" font-family="sans-serif" font-weight="900" font-style="italic" font-size="28" fill="#ffffff" letter-spacing="4">SCORESKN</text>
+  <text x="256" y="422" text-anchor="middle" font-family="sans-serif" font-weight="900" font-style="italic" font-size="28" fill="#ffffff" letter-spacing="4">SCORESKN</text>
 </svg>

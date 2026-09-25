@@ -708,6 +708,23 @@ export default function SportsApp() {
           )}
         </AnimatePresence>
       </main>
+
+      <footer className="mt-12 text-center text-xs text-slate-500 py-6 border-t border-slate-800/40">
+        <p className="font-semibold text-slate-400">SCORESKN • Live Sports & Championships</p>
+        <p className="mt-1">St. Kitts and Nevis</p>
+        <div className="mt-3 flex items-center justify-center gap-4 text-[11px]">
+          <a 
+            href="/privacy.html" 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            className="text-green-500 hover:text-green-400 underline transition-colors"
+          >
+            Privacy Policy
+          </a>
+          <span>•</span>
+          <span className="text-slate-500">v1.0.0</span>
+        </div>
+      </footer>
     </div>
   );
 }
